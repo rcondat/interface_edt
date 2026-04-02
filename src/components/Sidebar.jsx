@@ -2,7 +2,13 @@ import { useRef } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { durationLabel, groupPalette } from "../planner/selectors";
 
-function PaletteTile({ course, isSelected, onSelectCourseType, onPaletteDragStart }) {
+function PaletteTile({
+  course,
+  isSelected,
+  onSelectCourseType,
+  onPaletteDragStart,
+  onSelectPaletteItem,
+}) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `palette-${course.id}`,
     data: {
@@ -21,7 +27,13 @@ function PaletteTile({ course, isSelected, onSelectCourseType, onPaletteDragStar
       }}
       type="button"
       className={isSelected ? "tile tile-selected" : "tile"}
-      onClick={() => onSelectCourseType(isSelected ? null : course.id)}
+      onClick={() => {
+        onSelectCourseType(isSelected ? null : course.id);
+        onSelectPaletteItem?.({
+          source: "palette",
+          typeId: course.id,
+        });
+      }}
       onPointerDown={() => {
         const rect = tileRef.current?.getBoundingClientRect();
         if (rect && onPaletteDragStart) {
@@ -55,6 +67,7 @@ export default function Sidebar({
   onSelectCourseType,
   activeDragItem,
   onPaletteDragStart,
+  onSelectPaletteItem,
 }) {
   const groups = groupPalette(courseTypes, assignments);
   const isPaletteDrag = activeDragItem?.source === "palette";
@@ -116,6 +129,7 @@ export default function Sidebar({
                   isSelected={selectedCourseTypeId === course.id}
                   onSelectCourseType={onSelectCourseType}
                   onPaletteDragStart={onPaletteDragStart}
+                  onSelectPaletteItem={onSelectPaletteItem}
                 />
               ))}
             </section>

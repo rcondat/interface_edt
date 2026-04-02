@@ -12,13 +12,26 @@ import ScheduleGrid from "./components/ScheduleGrid";
 import DragPreview from "./components/DragPreview";
 import { DAYS, demoSemester, demoCourseTypes } from "./data/demoData";
 import { buildDemoAssignments } from "./data/demoAssignments";
-import { moveCourse, placeCourse, removeCourse } from "./planner/actions";
 import { getActiveWeek } from "./planner/selectors";
+import CourseDetailsPanel from "./components/CourseDetailsPanel";
+import { demoTeachers } from "./data/teachers";
+import { getTeacherMap } from "./planner/teachers";
+import {
+  assignTeacherToBlock,
+  moveCourse,
+  placeCourse,
+  removeCourse,
+} from "./planner/actions";
+import { validateDrop } from "./planner/preview";
 
 export default function App() {
   const [recentPlacement, setRecentPlacement] = useState(null);
   const [paletteDragSize, setPaletteDragSize] = useState(null);
 
+  const [teachers] = useState(demoTeachers);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const teacherMap = useMemo(() => getTeacherMap(teachers), [teachers]);
+  const [pendingTeacherAssignments, setPendingTeacherAssignments] = useState({});
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -43,6 +56,35 @@ export default function App() {
     [semester, activeWeekId]
   );
 
+  function handleAssignTeacher({ dayIndex, startSlot, durationSlots, teacherId }) {
+    const result = assignTeacherToBlock({
+      assignments,
+      weekId: activeWeekId,
+      dayIndex,
+      startSlot,
+      durationSlots,
+      teacherId,
+      dayCount: DAYS.length,
+      slotCount: semester.slots.length,
+    });
+
+    setAssignments(result.assignments);
+    setMessage(
+      teacherId
+        ? "Intervenant affecté au créneau."
+        : "Affectation de l’intervenant supprimée."
+    );
+  }
+
+
+  function handleSetPendingTeacher({ typeId, teacherId }) {
+    setPendingTeacherAssignments((prev) => ({
+      ...prev,
+      [typeId]: teacherId,
+    }));
+  }
+
+
   function handlePaletteDragStart(typeId, width, height) {
     setPaletteDragSize({
       typeId,
@@ -59,6 +101,8 @@ export default function App() {
       return;
     }
 
+    const assignedTeacherId = pendingTeacherAssignments[courseType.id] ?? null;
+
     const result = placeCourse({
       assignments,
       weekId: activeWeekId,
@@ -67,6 +111,7 @@ export default function App() {
       courseType,
       slotCount: semester.slots.length,
       dayCount: DAYS.length,
+      assignedTeacherId,
     });
 
     if (!result.ok) {
@@ -75,6 +120,12 @@ export default function App() {
     }
 
     setAssignments(result.assignments);
+    setSelectedItem({
+      source: "grid",
+      typeId: courseType.id,
+      dayIndex,
+      startSlot: slotIndex,
+    });
     setRecentPlacement({
       weekId: activeWeekId,
       dayIndex,
@@ -117,6 +168,12 @@ export default function App() {
     }
 
     setAssignments(result.assignments);
+    setSelectedItem({
+      source: "grid",
+      typeId: courseType.id,
+      dayIndex: toDayIndex,
+      startSlot: toSlotIndex,
+    });
     setRecentPlacement(null);
     setMessage(
       `${courseType.label} déplacé vers ${DAYS[toDayIndex]} à ${semester.slots[toSlotIndex].start}.`
@@ -142,6 +199,7 @@ export default function App() {
     });
 
     setAssignments(result.assignments);
+    setSelectedItem(null);
     setRecentPlacement(null);
     setMessage(
       `${courseType.label} supprimé de ${DAYS[dayIndex]} à ${semester.slots[startSlot].start}.`
@@ -163,11 +221,24 @@ export default function App() {
 
     const initialRect = event.active.rect.current?.initial;
 
+    let assignedTeacherId = null;
+
+    if (
+      data.source === "grid" &&
+      typeof data.fromDayIndex === "number" &&
+      typeof data.fromStartSlot === "number"
+    ) {
+      assignedTeacherId =
+        assignments[activeWeekId]?.[data.fromDayIndex]?.[data.fromStartSlot]
+          ?.assignedTeacherId ?? null;
+    }
+
     setActiveDragItem({
       source: data.source,
       typeId: data.typeId,
       fromDayIndex: data.fromDayIndex,
       fromStartSlot: data.fromStartSlot,
+      assignedTeacherId,
       width:
         data.source === "palette" && paletteDragSize?.typeId === data.typeId
           ? paletteDragSize.width
@@ -208,12 +279,10 @@ export default function App() {
 
     setActiveDragItem(null);
     setActiveDropTarget(null);
-    setPaletteDragSize(null);
 
-    if (!typeId) {
-      return;
-    }
+    if (!typeId) return;
 
+    // Suppression vers sidebar (inchangé)
     if (dropzone === "sidebar" && source === "grid") {
       if (typeof fromDayIndex !== "number" || typeof fromStartSlot !== "number") {
         return;
@@ -231,13 +300,73 @@ export default function App() {
       return;
     }
 
+    const courseType = courseTypes.find((c) => c.id === typeId);
+    if (!courseType) return;
+
+    const activeGrid = assignments[activeWeekId];
+
+    const ignoreBlock =
+      source === "grid"
+        ? {
+            dayIndex: fromDayIndex,
+            startSlot: fromStartSlot,
+            durationSlots: courseType.durationSlots,
+          }
+        : null;
+
+    const draggedBlock =
+      source === "grid"
+        ? activeGrid?.[fromDayIndex]?.[fromStartSlot]
+        : null;
+
+    const preselectedTeacherId =
+      source === "palette"
+        ? pendingTeacherAssignments[typeId] ?? null
+        : null;
+
+    const validation = validateDrop({
+      activeGrid,
+      dayIndex,
+      slotIndex,
+      durationSlots: courseType.durationSlots,
+      ignoreBlock,
+      slotCount: semester.slots.length,
+      teachers,
+      courseType,
+      draggedBlock,
+      activeWeek,
+      preselectedTeacherId,
+    });
+
+    if (!validation.ok) {
+      switch (validation.reason) {
+        case "overlap":
+          setMessage("Placement impossible : cases déjà occupées.");
+          break;
+        case "out-of-day":
+          setMessage("Placement impossible : dépassement de la journée.");
+          break;
+        case "teacher-unavailable":
+          setMessage("Placement impossible : intervenant indisponible.");
+          break;
+        default:
+          setMessage("Placement impossible.");
+      }
+      return;
+    }
+
+    // ✅ Placement autorisé
+
     if (source === "palette") {
       handlePlaceCourse(typeId, dayIndex, slotIndex);
       return;
     }
 
     if (source === "grid") {
-      if (typeof fromDayIndex !== "number" || typeof fromStartSlot !== "number") {
+      if (
+        typeof fromDayIndex !== "number" ||
+        typeof fromStartSlot !== "number"
+      ) {
         return;
       }
 
@@ -276,6 +405,7 @@ export default function App() {
             onSelectCourseType={setSelectedCourseTypeId}
             activeDragItem={activeDragItem}
             onPaletteDragStart={handlePaletteDragStart}
+            onSelectPaletteItem={setSelectedItem}
           />
 
           <section className="main-column">
@@ -298,13 +428,18 @@ export default function App() {
               slots={semester.slots}
               assignments={assignments}
               activeWeekId={activeWeekId}
+              activeWeek={activeWeek}
               courseTypes={courseTypes}
+              teachers={teachers}
               selectedCourseTypeId={selectedCourseTypeId}
               activeDragItem={activeDragItem}
               activeDropTarget={activeDropTarget}
               onCellClick={handleCellClick}
               onRemoveBlock={handleRemoveCourse}
+              onSelectBlock={setSelectedItem}
+              teacherMap={teacherMap}
               recentPlacement={recentPlacement}
+              pendingTeacherAssignments={pendingTeacherAssignments}
             />
 
             <div className="panel">
@@ -314,13 +449,25 @@ export default function App() {
               <div className="panel-body muted">{message}</div>
             </div>
           </section>
+
+          <CourseDetailsPanel
+            selectedItem={selectedItem}
+            courseTypes={courseTypes}
+            teachers={teachers}
+            assignments={assignments}
+            activeWeek={activeWeek}
+            onAssignTeacher={handleAssignTeacher}
+            pendingTeacherAssignments={pendingTeacherAssignments}
+            onSetPendingTeacher={handleSetPendingTeacher}
+          />
         </main>
       </div>
 
       <DragOverlay dropAnimation={null}>
-        <DragPreview  
+        <DragPreview
           dragItem={activeDragItem}
           courseTypes={courseTypes}
+          teacherMap={teacherMap}
         />
       </DragOverlay>
     </DndContext>

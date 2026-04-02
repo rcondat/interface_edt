@@ -82,6 +82,7 @@ export function getMergedBlocksForDay(daySlots, courseTypesById) {
       typeId: cell.typeId,
       startSlot: slot,
       durationSlots: course.durationSlots,
+      assignedTeacherId: cell.assignedTeacherId ?? null,
     });
 
     slot += course.durationSlots;

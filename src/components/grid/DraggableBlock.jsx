@@ -5,7 +5,9 @@ export default function DraggableBlock({
   block,
   dayIndex,
   course,
+  teacherMap,
   onRemoveBlock,
+  onSelectBlock,
   isRecentlyPlaced = false,
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -20,6 +22,21 @@ export default function DraggableBlock({
 
   const top = block.startSlot * SLOT_HEIGHT + 6;
   const height = block.durationSlots * SLOT_HEIGHT - 12;
+
+  const assignedTeacher = block.assignedTeacherId
+    ? teacherMap[block.assignedTeacherId]
+    : null;
+
+  const singleTeacher =
+    !assignedTeacher && course.teacherIds?.length === 1
+      ? teacherMap[course.teacherIds[0]]
+      : null;
+
+  const subtitle = assignedTeacher
+    ? assignedTeacher.shortName
+    : singleTeacher
+      ? singleTeacher.shortName
+      : "";
 
   const style = {
     top: `${top}px`,
@@ -38,6 +55,14 @@ export default function DraggableBlock({
       className={isRecentlyPlaced ? "course-block course-block-new" : "course-block"}
       style={style}
       title={course.label}
+      onClick={() =>
+        onSelectBlock?.({
+          source: "grid",
+          typeId: block.typeId,
+          dayIndex,
+          startSlot: block.startSlot,
+        })
+      }
       {...listeners}
       {...attributes}
     >
@@ -63,7 +88,7 @@ export default function DraggableBlock({
       </button>
 
       <div className="course-block-title">{course.label}</div>
-      <div className="course-block-meta">{"TMP"}</div>
+      <div className="course-block-meta">{subtitle}</div>
     </div>
   );
 }

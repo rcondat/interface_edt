@@ -1,5 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
-import { getPreviewState } from "../../planner/preview";
+import { getCellConstraintState, getPreviewState } from "../../planner/preview";
 
 export default function DroppableCell({
   day,
@@ -13,6 +13,12 @@ export default function DroppableCell({
   previewDuration,
   ignoreBlock,
   slotCount,
+  teachers,
+  courseType,
+  draggedBlock,
+  activeWeek,
+  isDragging,
+  preselectedTeacherId,
 }) {
   const { setNodeRef } = useDroppable({
     id: `cell-${dayIndex}-${slotIndex}`,
@@ -25,6 +31,33 @@ export default function DroppableCell({
   let className =
     selectedCourseTypeId ? "grid-cell grid-cell-selectable" : "grid-cell";
 
+  if (isDragging) {
+    const constraintState = getCellConstraintState({
+      activeGrid,
+      dayIndex,
+      slotIndex,
+      teachers,
+      courseType,
+      draggedBlock,
+      activeWeek,
+      preselectedTeacherId,
+    });
+
+    const isIgnoredSlot =
+      ignoreBlock &&
+      dayIndex === ignoreBlock.dayIndex &&
+      slotIndex >= ignoreBlock.startSlot &&
+      slotIndex < ignoreBlock.startSlot + ignoreBlock.durationSlots;
+
+    if (!isIgnoredSlot && constraintState.occupied) {
+      className += " grid-cell-constraint-occupied";
+    }
+
+    if (constraintState.teacherUnavailable) {
+      className += " grid-cell-constraint-teacher";
+    }
+  }
+
   const previewState = getPreviewState({
     activeGrid,
     previewAnchor,
@@ -33,6 +66,11 @@ export default function DroppableCell({
     previewDuration,
     ignoreBlock,
     slotCount,
+    teachers,
+    courseType,
+    draggedBlock,
+    activeWeek,
+    preselectedTeacherId,
   });
 
   if (previewState.isPreview) {

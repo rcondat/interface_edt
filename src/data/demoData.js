@@ -26,6 +26,7 @@ export const demoCourseTypes = [
     durationSlots: 2,
     totalCount: 2,
     color: "#2563eb",
+    teacherIds: ["t-durand", "t-martin"],
   },
   {
     id: "algo-td",
@@ -35,6 +36,7 @@ export const demoCourseTypes = [
     durationSlots: 1,
     totalCount: 4,
     color: "#0f766e",
+    teacherIds: ["t-martin"],
   },
   {
     id: "bdd-cm",
@@ -44,5 +46,6 @@ export const demoCourseTypes = [
     durationSlots: 1,
     totalCount: 3,
     color: "#9333ea",
+    teacherIds: ["t-bernard"],
   },
 ];

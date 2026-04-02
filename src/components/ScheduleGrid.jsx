@@ -13,13 +13,18 @@ export default function ScheduleGrid({
   slots,
   assignments,
   activeWeekId,
+  activeWeek,
   courseTypes,
+  teachers,
   selectedCourseTypeId,
   activeDragItem,
   activeDropTarget,
   onCellClick,
   onRemoveBlock,
+  onSelectBlock,
+  teacherMap,
   recentPlacement,
+  pendingTeacherAssignments,
 }) {
   const courseTypesById = getCourseTypesById(courseTypes);
   const activeGrid = getActiveGrid(assignments, activeWeekId);
@@ -27,10 +32,23 @@ export default function ScheduleGrid({
   const draggedCourse =
     activeDragItem?.typeId ? courseTypesById[activeDragItem.typeId] : null;
 
+  const draggedBlock =
+    activeDragItem?.source === "grid" &&
+    typeof activeDragItem.fromDayIndex === "number" &&
+    typeof activeDragItem.fromStartSlot === "number"
+      ? activeGrid?.[activeDragItem.fromDayIndex]?.[activeDragItem.fromStartSlot] ?? null
+      : null;
+
   const previewDuration = draggedCourse?.durationSlots ?? 0;
   const ignoreBlock = getIgnoreBlock(activeDragItem, draggedCourse);
   const previewAnchor =
     activeDropTarget?.dropzone === "sidebar" ? null : activeDropTarget;
+
+  const isDragging = Boolean(activeDragItem);
+  const preselectedTeacherId =
+    activeDragItem?.source === "palette" && draggedCourse
+      ? pendingTeacherAssignments?.[draggedCourse.id] ?? null
+      : null;
 
   return (
     <div className="panel">
@@ -85,6 +103,12 @@ export default function ScheduleGrid({
                       previewDuration={previewDuration}
                       ignoreBlock={ignoreBlock}
                       slotCount={slots.length}
+                      teachers={teachers}
+                      courseType={draggedCourse}
+                      draggedBlock={draggedBlock}
+                      activeWeek={activeWeek}
+                      isDragging={isDragging}
+                      preselectedTeacherId={preselectedTeacherId}
                     />
                   ))}
 
@@ -96,17 +120,18 @@ export default function ScheduleGrid({
                         key={`${dayIndex}-${block.typeId}-${block.startSlot}`}
                         block={block}
                         dayIndex={dayIndex}
-                        slots={slots}
                         course={course}
+                        teacherMap={teacherMap}
                         onRemoveBlock={onRemoveBlock}
+                        onSelectBlock={onSelectBlock}
                         isRecentlyPlaced={
-                            recentPlacement &&
-                            recentPlacement.weekId === activeWeekId &&
-                            recentPlacement.dayIndex === dayIndex &&
-                            recentPlacement.startSlot === block.startSlot &&
-                            recentPlacement.typeId === block.typeId
+                          recentPlacement &&
+                          recentPlacement.weekId === activeWeekId &&
+                          recentPlacement.dayIndex === dayIndex &&
+                          recentPlacement.startSlot === block.startSlot &&
+                          recentPlacement.typeId === block.typeId
                         }
-                        />
+                      />
                     );
                   })}
                 </div>

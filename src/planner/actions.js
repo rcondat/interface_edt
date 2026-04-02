@@ -8,6 +8,7 @@ export function placeCourse({
   courseType,
   slotCount,
   dayCount,
+  assignedTeacherId = null,
 }) {
   const next = cloneAssignments(assignments);
   const week = ensureWeekGrid(next, weekId, dayCount, slotCount);
@@ -28,6 +29,7 @@ export function placeCourse({
       segment: i,
       startSlot: slotIndex,
       durationSlots: courseType.durationSlots,
+      assignedTeacherId,
     };
   }
 
@@ -67,6 +69,9 @@ export function moveCourse({
   const next = cloneAssignments(assignments);
   const week = ensureWeekGrid(next, weekId, dayCount, slotCount);
 
+  const originalBlock = week[fromDayIndex][fromStartSlot];
+  const assignedTeacherId = originalBlock?.assignedTeacherId ?? null;
+
   for (let i = 0; i < courseType.durationSlots; i += 1) {
     week[fromDayIndex][fromStartSlot + i] = null;
   }
@@ -87,6 +92,33 @@ export function moveCourse({
       segment: i,
       startSlot: toSlotIndex,
       durationSlots: courseType.durationSlots,
+      assignedTeacherId,
+    };
+  }
+
+  return { ok: true, assignments: next };
+}
+
+export function assignTeacherToBlock({
+  assignments,
+  weekId,
+  dayIndex,
+  startSlot,
+  durationSlots,
+  teacherId,
+  dayCount,
+  slotCount,
+}) {
+  const next = cloneAssignments(assignments);
+  const week = ensureWeekGrid(next, weekId, dayCount, slotCount);
+
+  for (let i = 0; i < durationSlots; i += 1) {
+    const cell = week[dayIndex][startSlot + i];
+    if (!cell) continue;
+
+    week[dayIndex][startSlot + i] = {
+      ...cell,
+      assignedTeacherId: teacherId,
     };
   }
 
