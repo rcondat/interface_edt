@@ -9,66 +9,11 @@ import {
 import Sidebar from "./components/Sidebar";
 import WeekTabs from "./components/WeekTabs";
 import ScheduleGrid from "./components/ScheduleGrid";
+import DragPreview from "./components/DragPreview";
 import { DAYS, demoSemester, demoCourseTypes } from "./data/demoData";
-import { makeEmptyWeek } from "./planner/model";
+import { buildDemoAssignments } from "./data/demoAssignments";
 import { moveCourse, placeCourse, removeCourse } from "./planner/actions";
-import { durationLabel, getActiveWeek } from "./planner/selectors";
-
-function buildDemoAssignments() {
-  const week = makeEmptyWeek(DAYS.length, demoSemester.slots.length);
-
-  week[0][0] = { typeId: "algo-cm", segment: 0, startSlot: 0, durationSlots: 2 };
-  week[0][1] = { typeId: "algo-cm", segment: 1, startSlot: 0, durationSlots: 2 };
-
-  week[2][1] = { typeId: "bdd-cm", segment: 0, startSlot: 1, durationSlots: 1 };
-  week[4][3] = { typeId: "algo-td", segment: 0, startSlot: 3, durationSlots: 1 };
-
-  return {
-    [demoSemester.weeks[0].id]: week,
-    [demoSemester.weeks[1].id]: makeEmptyWeek(DAYS.length, demoSemester.slots.length),
-    [demoSemester.weeks[2].id]: makeEmptyWeek(DAYS.length, demoSemester.slots.length),
-  };
-}
-
-function DragPreview({ dragItem, courseTypes, slots }) {
-  if (!dragItem) return null;
-
-  const courseType = courseTypes.find((course) => course.id === dragItem.typeId);
-  if (!courseType) return null;
-
-  let meta = durationLabel(courseType.durationSlots);
-
-  if (dragItem.source === "grid" && typeof dragItem.fromStartSlot === "number") {
-    const firstSlot = slots[dragItem.fromStartSlot];
-    const lastSlot = slots[dragItem.fromStartSlot + courseType.durationSlots - 1];
-
-    if (firstSlot && lastSlot) {
-      meta = `${firstSlot.start} → ${lastSlot.end}`;
-    }
-  }
-
-  const overlayWidth =
-    dragItem.source === "grid"
-      ? dragItem.width ?? 180
-      : Math.min(dragItem.width ?? 220, 200);
-
-  return (
-    <div
-      className="course-block course-block-overlay"
-      style={{
-        backgroundColor: courseType.color,
-        height: `${courseType.durationSlots * 72 - 12}px`,
-        width: `${overlayWidth}px`,
-      }}
-    >
-      <div className="course-block-title">{courseType.label}</div>
-      <div className="course-block-meta">{meta}</div>
-      <div className="course-block-foot">
-        <span>{durationLabel(courseType.durationSlots)}</span>
-      </div>
-    </div>
-  );
-}
+import { getActiveWeek } from "./planner/selectors";
 
 export default function App() {
   const sensors = useSensors(
@@ -95,7 +40,7 @@ export default function App() {
     [semester, activeWeekId]
   );
 
-  function tryPlaceCourse(courseTypeId, dayIndex, slotIndex) {
+  function handlePlaceCourse(courseTypeId, dayIndex, slotIndex) {
     const courseType = courseTypes.find((course) => course.id === courseTypeId);
 
     if (!courseType) {
@@ -125,7 +70,7 @@ export default function App() {
     setSelectedCourseTypeId(null);
   }
 
-  function tryMoveCourse(courseTypeId, fromDayIndex, fromStartSlot, toDayIndex, toSlotIndex) {
+  function handleMoveCourse(courseTypeId, fromDayIndex, fromStartSlot, toDayIndex, toSlotIndex) {
     const courseType = courseTypes.find((course) => course.id === courseTypeId);
 
     if (!courseType) {
@@ -160,16 +105,7 @@ export default function App() {
     );
   }
 
-  function handleCellClick(dayIndex, slotIndex) {
-    if (!selectedCourseTypeId) {
-      setMessage("Sélectionne d'abord une tuile, ou utilise le glisser-déposer.");
-      return;
-    }
-
-    tryPlaceCourse(selectedCourseTypeId, dayIndex, slotIndex);
-  }
-
-  function handleBlockClick({ dayIndex, startSlot, typeId }) {
+  function handleRemoveCourse({ dayIndex, startSlot, typeId }) {
     const courseType = courseTypes.find((course) => course.id === typeId);
 
     if (!courseType) {
@@ -191,6 +127,15 @@ export default function App() {
     setMessage(
       `${courseType.label} supprimé de ${DAYS[dayIndex]} à ${semester.slots[startSlot].start}.`
     );
+  }
+
+  function handleCellClick(dayIndex, slotIndex) {
+    if (!selectedCourseTypeId) {
+      setMessage("Sélectionne d'abord une tuile, ou utilise le glisser-déposer.");
+      return;
+    }
+
+    handlePlaceCourse(selectedCourseTypeId, dayIndex, slotIndex);
   }
 
   function handleDragStart(event) {
@@ -248,7 +193,7 @@ export default function App() {
         return;
       }
 
-      handleBlockClick({
+      handleRemoveCourse({
         dayIndex: fromDayIndex,
         startSlot: fromStartSlot,
         typeId,
@@ -261,7 +206,7 @@ export default function App() {
     }
 
     if (source === "palette") {
-      tryPlaceCourse(typeId, dayIndex, slotIndex);
+      handlePlaceCourse(typeId, dayIndex, slotIndex);
       return;
     }
 
@@ -270,7 +215,7 @@ export default function App() {
         return;
       }
 
-      tryMoveCourse(typeId, fromDayIndex, fromStartSlot, dayIndex, slotIndex);
+      handleMoveCourse(typeId, fromDayIndex, fromStartSlot, dayIndex, slotIndex);
     }
   }
 
@@ -330,7 +275,7 @@ export default function App() {
               activeDragItem={activeDragItem}
               activeDropTarget={activeDropTarget}
               onCellClick={handleCellClick}
-              onRemoveBlock={handleBlockClick}
+              onRemoveBlock={handleRemoveCourse}
             />
 
             <div className="panel">

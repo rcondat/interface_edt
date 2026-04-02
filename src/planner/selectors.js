@@ -1,4 +1,6 @@
-export function durationLabel(durationSlots, slotMinutes = 90) {
+import { SLOT_MINUTES } from "./constants";
+
+export function durationLabel(durationSlots, slotMinutes = SLOT_MINUTES) {
   const minutes = durationSlots * slotMinutes;
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;

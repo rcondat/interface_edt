@@ -1,3 +1,7 @@
+/* =========================================================
+   1. Variables globales
+   ========================================================= */
+
 :root {
   --bg: #f3f4f6;
   --panel: #ffffff;
@@ -8,6 +12,10 @@
   --radius: 18px;
   --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
+
+/* =========================================================
+   2. Reset / base
+   ========================================================= */
 
 * {
   box-sizing: border-box;
@@ -23,6 +31,10 @@ body {
 button {
   font: inherit;
 }
+
+/* =========================================================
+   3. Layout global
+   ========================================================= */
 
 .app-shell {
   max-width: 1440px;
@@ -55,6 +67,10 @@ button {
   gap: 20px;
 }
 
+/* =========================================================
+   4. Panels / blocs génériques
+   ========================================================= */
+
 .panel {
   background: var(--panel);
   border-radius: 24px;
@@ -80,6 +96,36 @@ button {
   font-weight: 600;
 }
 
+.muted {
+  color: var(--muted);
+}
+
+/* =========================================================
+   5. Sidebar / palette
+   ========================================================= */
+
+.sidebar {
+  position: relative;
+}
+
+.sidebar-header {
+  position: relative;
+}
+
+.sidebar-drop-active {
+  box-shadow:
+    0 8px 24px rgba(15, 23, 42, 0.08),
+    0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.sidebar-drop-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 24px;
+  pointer-events: none;
+}
+
 .palette-group + .palette-group {
   margin-top: 20px;
 }
@@ -92,13 +138,32 @@ button {
   color: var(--muted);
 }
 
+.empty-box {
+  padding: 14px;
+  background: #f8fafc;
+  border-radius: 14px;
+  color: var(--muted);
+}
+
+/* =========================================================
+   6. Tuiles palette
+   ========================================================= */
+
 .tile {
+  width: 100%;
   border: 1px solid var(--line);
   border-radius: 16px;
   padding: 12px;
   background: white;
   box-shadow: 0 3px 10px rgba(15, 23, 42, 0.05);
   margin-bottom: 10px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.12);
 }
 
 .tile-head,
@@ -112,14 +177,10 @@ button {
   font-weight: 700;
 }
 
-.tile-subtitle,
-.muted {
-  color: var(--muted);
-}
-
 .tile-subtitle {
   margin-top: 4px;
   font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .tile-meta {
@@ -141,12 +202,9 @@ button {
   font-weight: 700;
 }
 
-.empty-box {
-  padding: 14px;
-  background: #f8fafc;
-  border-radius: 14px;
-  color: var(--muted);
-}
+/* =========================================================
+   7. Onglets semaines
+   ========================================================= */
 
 .week-tabs {
   display: flex;
@@ -168,16 +226,20 @@ button {
   color: white;
 }
 
+/* =========================================================
+   8. Grille EDT
+   ========================================================= */
+
 .grid-wrap {
-  overflow-x: hidden;
+  overflow-x: clip;
   overflow-y: visible;
 }
 
 .schedule-grid {
-  position: relative;
   display: grid;
   min-width: 980px;
   border-top: 1px solid var(--line);
+  position: relative;
 }
 
 .grid-corner,
@@ -185,8 +247,6 @@ button {
 .time-column,
 .day-column {
   background: white;
-  position: relative;
-  overflow: hidden;
 }
 
 .grid-header {
@@ -197,81 +257,24 @@ button {
   font-weight: 700;
 }
 
-.time-slot,
-.grid-cell {
+.time-slot {
   height: 72px;
   border-bottom: 1px solid var(--line);
-}
-
-.time-slot {
   padding: 10px;
   color: var(--muted);
   font-size: 0.85rem;
 }
 
 .day-column {
-  border-left: 1px solid var(--line);
-}
-
-@media (max-width: 1080px) {
-  .layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.day-column {
   position: relative;
   border-left: 1px solid var(--line);
+  overflow: hidden;
 }
 
 .grid-cell {
+  display: block;
+  width: 100%;
   height: 72px;
-  border-bottom: 1px solid var(--line);
-}
-
-.course-block {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  border-radius: 16px;
-  color: white;
-  padding: 12px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
-  overflow: hidden;
-}
-
-.course-block-title {
-  font-weight: 700;
-}
-
-.course-block-meta {
-  margin-top: 4px;
-  font-size: 0.84rem;
-  opacity: 0.95;
-}
-
-.course-block-foot {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  font-size: 0.78rem;
-  opacity: 0.9;
-}
-
-.tile {
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-}
-
-.tile-selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.12);
-}
-
-.grid-cell {
-  display: block;
-  width: 100%;
   background: white;
   border: none;
   border-bottom: 1px solid var(--line);
@@ -283,101 +286,17 @@ button {
   background: #eff6ff;
 }
 
-.course-block {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  border: none;
-  width: calc(100% - 16px);
-  border-radius: 16px;
-  color: white;
-  padding: 12px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
-  overflow: hidden;
-  text-align: left;
-  cursor: pointer;
-}
-
-.course-block:hover {
-  filter: brightness(1.02);
-}
-
-.course-block-remove {
-  font-size: 0.75rem;
-  opacity: 0.92;
-}
-
-.tile {
-  width: 100%;
-  text-align: left;
-  cursor: pointer;
-}
-
-.tile-selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.12);
-}
-
-.tile-overlay {
-  width: 260px;
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.18);
-  transform: rotate(1deg);
-}
-
-.grid-cell {
-  display: block;
-  width: 100%;
-  background: white;
-  border: none;
-  border-bottom: 1px solid var(--line);
-  padding: 0;
-  cursor: pointer;
-}
-
-.grid-cell-selectable:hover {
-  background: #eff6ff;
-}
-
-.grid-cell-over {
+.grid-cell-preview-valid {
   background: #dbeafe;
 }
 
-.course-block {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  border: none;
-  width: calc(100% - 16px);
-  border-radius: 16px;
-  color: white;
-  padding: 12px;
-  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
-  overflow: hidden;
-  text-align: left;
-  cursor: pointer;
+.grid-cell-preview-invalid {
+  background: #fee2e2;
 }
 
-.course-block:hover {
-  filter: brightness(1.02);
-}
-
-.course-block-remove {
-  font-size: 0.75rem;
-  opacity: 0.92;
-}
-
-.tile-overlay {
-  width: 260px;
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.18);
-  transform: rotate(1deg);
-}
-
-.tile-drag-hint {
-  display: inline-block;
-  margin-top: 10px;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
+/* =========================================================
+   9. Blocs de cours dans la grille
+   ========================================================= */
 
 .course-block {
   position: absolute;
@@ -399,6 +318,28 @@ button {
 .course-block:active {
   cursor: grabbing;
 }
+
+.course-block-title {
+  font-weight: 700;
+}
+
+.course-block-meta {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  opacity: 0.95;
+}
+
+.course-block-foot {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+/* =========================================================
+   10. Action suppression sur les blocs
+   ========================================================= */
 
 .course-block-delete {
   position: absolute;
@@ -427,13 +368,9 @@ button {
   background: rgba(15, 23, 42, 0.35);
 }
 
-.course-block-foot {
-  position: absolute;
-  left: 12px;
-  bottom: 10px;
-  font-size: 0.78rem;
-  opacity: 0.9;
-}
+/* =========================================================
+   11. Overlay de drag
+   ========================================================= */
 
 .course-block-overlay {
   position: relative;
@@ -443,43 +380,15 @@ button {
   transform: rotate(1deg);
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.22);
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0.9;
 }
 
-.grid-cell-preview-valid {
-  background: #dbeafe;
-}
+/* =========================================================
+   12. Responsive
+   ========================================================= */
 
-.grid-cell-preview-invalid {
-  background: #fee2e2;
-}
-
-.grid-cell-over-anchor {
-  outline: none;
-}
-
-.sidebar {
-  position: relative;
-}
-
-.sidebar-header {
-  position: relative;
-}
-
-.sidebar-drop-active {
-  box-shadow:
-    0 8px 24px rgba(15, 23, 42, 0.08),
-    0 0 0 2px rgba(37, 99, 235, 0.18);
-}
-
-.sidebar {
-  position: relative;
-}
-
-.sidebar-drop-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(37, 99, 235, 0.08);
-  border-radius: 24px;
-  pointer-events: none;
+@media (max-width: 1080px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
 }
