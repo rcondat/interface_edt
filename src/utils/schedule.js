@@ -53,7 +53,45 @@ export function groupPalette(courseTypes, assignments) {
   return groups;
 }
 
-export function placeCourse({ assignments, weekId, dayIndex, slotIndex, courseType, slotCount, dayCount }) {
+export function getMergedBlocksForDay(daySlots, courseTypesById) {
+  const blocks = [];
+  let slot = 0;
+
+  while (slot < daySlots.length) {
+    const cell = daySlots[slot];
+
+    if (!cell || cell.segment !== 0) {
+      slot += 1;
+      continue;
+    }
+
+    const course = courseTypesById[cell.typeId];
+    if (!course) {
+      slot += 1;
+      continue;
+    }
+
+    blocks.push({
+      typeId: cell.typeId,
+      startSlot: slot,
+      durationSlots: course.durationSlots,
+    });
+
+    slot += course.durationSlots;
+  }
+
+  return blocks;
+}
+
+export function placeCourse({
+  assignments,
+  weekId,
+  dayIndex,
+  slotIndex,
+  courseType,
+  slotCount,
+  dayCount,
+}) {
   const next = structuredClone(assignments);
   const week = ensureWeekGrid(next, weekId, dayCount, slotCount);
 
@@ -74,6 +112,25 @@ export function placeCourse({ assignments, weekId, dayIndex, slotIndex, courseTy
       startSlot: slotIndex,
       durationSlots: courseType.durationSlots,
     };
+  }
+
+  return { ok: true, assignments: next };
+}
+
+export function removeCourse({
+  assignments,
+  weekId,
+  dayIndex,
+  startSlot,
+  courseType,
+  dayCount,
+  slotCount,
+}) {
+  const next = structuredClone(assignments);
+  const week = ensureWeekGrid(next, weekId, dayCount, slotCount);
+
+  for (let i = 0; i < courseType.durationSlots; i += 1) {
+    week[dayIndex][startSlot + i] = null;
   }
 
   return { ok: true, assignments: next };

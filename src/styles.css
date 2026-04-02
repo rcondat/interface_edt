@@ -214,3 +214,157 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.day-column {
+  position: relative;
+  border-left: 1px solid var(--line);
+}
+
+.grid-cell {
+  height: 72px;
+  border-bottom: 1px solid var(--line);
+}
+
+.course-block {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border-radius: 16px;
+  color: white;
+  padding: 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.course-block-title {
+  font-weight: 700;
+}
+
+.course-block-meta {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  opacity: 0.95;
+}
+
+.course-block-foot {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 0.78rem;
+  opacity: 0.9;
+}
+
+.tile {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.12);
+}
+
+.grid-cell {
+  display: block;
+  width: 100%;
+  background: white;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 0;
+  cursor: pointer;
+}
+
+.grid-cell-selectable:hover {
+  background: #eff6ff;
+}
+
+.course-block {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border: none;
+  width: calc(100% - 16px);
+  border-radius: 16px;
+  color: white;
+  padding: 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+}
+
+.course-block:hover {
+  filter: brightness(1.02);
+}
+
+.course-block-remove {
+  font-size: 0.75rem;
+  opacity: 0.92;
+}
+
+.tile {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile-selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(17, 24, 39, 0.12);
+}
+
+.tile-overlay {
+  width: 260px;
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.18);
+  transform: rotate(1deg);
+}
+
+.grid-cell {
+  display: block;
+  width: 100%;
+  background: white;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  padding: 0;
+  cursor: pointer;
+}
+
+.grid-cell-selectable:hover {
+  background: #eff6ff;
+}
+
+.grid-cell-over {
+  background: #dbeafe;
+}
+
+.course-block {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  border: none;
+  width: calc(100% - 16px);
+  border-radius: 16px;
+  color: white;
+  padding: 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+  text-align: left;
+  cursor: pointer;
+}
+
+.course-block:hover {
+  filter: brightness(1.02);
+}
+
+.course-block-remove {
+  font-size: 0.75rem;
+  opacity: 0.92;
+}
+
+.tile-drag-hint {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
