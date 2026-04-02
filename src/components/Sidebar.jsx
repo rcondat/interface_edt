@@ -1,7 +1,8 @@
+import { useRef } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { durationLabel, groupPalette } from "../planner/selectors";
 
-function PaletteTile({ course, isSelected, onSelectCourseType }) {
+function PaletteTile({ course, isSelected, onSelectCourseType, onPaletteDragStart }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `palette-${course.id}`,
     data: {
@@ -10,12 +11,23 @@ function PaletteTile({ course, isSelected, onSelectCourseType }) {
     },
   });
 
+  const tileRef = useRef(null);
+
   return (
     <button
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        tileRef.current = node;
+      }}
       type="button"
       className={isSelected ? "tile tile-selected" : "tile"}
       onClick={() => onSelectCourseType(isSelected ? null : course.id)}
+      onPointerDown={() => {
+        const rect = tileRef.current?.getBoundingClientRect();
+        if (rect && onPaletteDragStart) {
+          onPaletteDragStart(course.id, rect.width, rect.height);
+        }
+      }}
       {...listeners}
       {...attributes}
     >
@@ -42,6 +54,7 @@ export default function Sidebar({
   selectedCourseTypeId,
   onSelectCourseType,
   activeDragItem,
+  onPaletteDragStart,
 }) {
   const groups = groupPalette(courseTypes, assignments);
   const isPaletteDrag = activeDragItem?.source === "palette";
@@ -60,7 +73,6 @@ export default function Sidebar({
         const nextItems = items
           .map((course) => {
             if (course.id !== draggedTypeId) return course;
-
             return {
               ...course,
               remaining: course.remaining - 1,
@@ -73,8 +85,7 @@ export default function Sidebar({
       .filter(([, items]) => items.length > 0)
   );
 
-  const showSidebarOverlay =
-    isOver && activeDragItem?.source === "grid";
+  const showSidebarOverlay = isOver && activeDragItem?.source === "grid";
 
   return (
     <aside
@@ -83,12 +94,12 @@ export default function Sidebar({
     >
       <div className="panel-header sidebar-header">
         <div>
-            <h2>Créneaux à placer</h2>
-            <span className="badge">{semesterName}</span>
+          <h2>Créneaux à placer</h2>
+          <span className="badge">{semesterName}</span>
         </div>
-        </div>
+      </div>
 
-        {showSidebarOverlay && <div className="sidebar-drop-overlay" />}
+      {showSidebarOverlay && <div className="sidebar-drop-overlay" />}
 
       <div className="panel-body">
         {Object.keys(adjustedGroups).length === 0 ? (
@@ -104,6 +115,7 @@ export default function Sidebar({
                   course={course}
                   isSelected={selectedCourseTypeId === course.id}
                   onSelectCourseType={onSelectCourseType}
+                  onPaletteDragStart={onPaletteDragStart}
                 />
               ))}
             </section>

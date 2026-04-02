@@ -1,13 +1,12 @@
 import { useDraggable } from "@dnd-kit/core";
 import { SLOT_HEIGHT } from "../../planner/constants";
-import { durationLabel } from "../../planner/selectors";
 
 export default function DraggableBlock({
   block,
   dayIndex,
-  slots,
   course,
   onRemoveBlock,
+  isRecentlyPlaced = false,
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `block-${dayIndex}-${block.startSlot}-${block.typeId}`,
@@ -21,14 +20,12 @@ export default function DraggableBlock({
 
   const top = block.startSlot * SLOT_HEIGHT + 6;
   const height = block.durationSlots * SLOT_HEIGHT - 12;
-  const firstSlot = slots[block.startSlot];
-  const lastSlot = slots[block.startSlot + block.durationSlots - 1];
 
   const style = {
     top: `${top}px`,
     height: `${height}px`,
     backgroundColor: course.color,
-    opacity: isDragging ? 0.35 : 1,
+    visibility: isDragging ? "hidden" : "visible",
   };
 
   if (transform) {
@@ -38,7 +35,7 @@ export default function DraggableBlock({
   return (
     <div
       ref={setNodeRef}
-      className="course-block"
+      className={isRecentlyPlaced ? "course-block course-block-new" : "course-block"}
       style={style}
       title={course.label}
       {...listeners}
@@ -66,12 +63,7 @@ export default function DraggableBlock({
       </button>
 
       <div className="course-block-title">{course.label}</div>
-      <div className="course-block-meta">
-        {firstSlot.start} → {lastSlot.end}
-      </div>
-      <div className="course-block-foot">
-        <span>{durationLabel(block.durationSlots)}</span>
-      </div>
+      <div className="course-block-meta">{"TMP"}</div>
     </div>
   );
 }

@@ -19,6 +19,7 @@ export default function ScheduleGrid({
   activeDropTarget,
   onCellClick,
   onRemoveBlock,
+  recentPlacement,
 }) {
   const courseTypesById = getCourseTypesById(courseTypes);
   const activeGrid = getActiveGrid(assignments, activeWeekId);
@@ -98,7 +99,14 @@ export default function ScheduleGrid({
                         slots={slots}
                         course={course}
                         onRemoveBlock={onRemoveBlock}
-                      />
+                        isRecentlyPlaced={
+                            recentPlacement &&
+                            recentPlacement.weekId === activeWeekId &&
+                            recentPlacement.dayIndex === dayIndex &&
+                            recentPlacement.startSlot === block.startSlot &&
+                            recentPlacement.typeId === block.typeId
+                        }
+                        />
                     );
                   })}
                 </div>

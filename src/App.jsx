@@ -16,6 +16,9 @@ import { moveCourse, placeCourse, removeCourse } from "./planner/actions";
 import { getActiveWeek } from "./planner/selectors";
 
 export default function App() {
+  const [recentPlacement, setRecentPlacement] = useState(null);
+  const [paletteDragSize, setPaletteDragSize] = useState(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -39,6 +42,14 @@ export default function App() {
     () => getActiveWeek(semester, activeWeekId),
     [semester, activeWeekId]
   );
+
+  function handlePaletteDragStart(typeId, width, height) {
+    setPaletteDragSize({
+      typeId,
+      width,
+      height,
+    });
+  }
 
   function handlePlaceCourse(courseTypeId, dayIndex, slotIndex) {
     const courseType = courseTypes.find((course) => course.id === courseTypeId);
@@ -64,6 +75,12 @@ export default function App() {
     }
 
     setAssignments(result.assignments);
+    setRecentPlacement({
+      weekId: activeWeekId,
+      dayIndex,
+      startSlot: slotIndex,
+      typeId: courseType.id,
+    });
     setMessage(
       `${courseType.label} placé sur ${DAYS[dayIndex]} à ${semester.slots[slotIndex].start}.`
     );
@@ -100,6 +117,7 @@ export default function App() {
     }
 
     setAssignments(result.assignments);
+    setRecentPlacement(null);
     setMessage(
       `${courseType.label} déplacé vers ${DAYS[toDayIndex]} à ${semester.slots[toSlotIndex].start}.`
     );
@@ -124,6 +142,7 @@ export default function App() {
     });
 
     setAssignments(result.assignments);
+    setRecentPlacement(null);
     setMessage(
       `${courseType.label} supprimé de ${DAYS[dayIndex]} à ${semester.slots[startSlot].start}.`
     );
@@ -149,8 +168,14 @@ export default function App() {
       typeId: data.typeId,
       fromDayIndex: data.fromDayIndex,
       fromStartSlot: data.fromStartSlot,
-      width: initialRect?.width ?? null,
-      height: initialRect?.height ?? null,
+      width:
+        data.source === "palette" && paletteDragSize?.typeId === data.typeId
+          ? paletteDragSize.width
+          : initialRect?.width ?? null,
+      height:
+        data.source === "palette" && paletteDragSize?.typeId === data.typeId
+          ? paletteDragSize.height
+          : initialRect?.height ?? null,
     });
   }
 
@@ -183,6 +208,7 @@ export default function App() {
 
     setActiveDragItem(null);
     setActiveDropTarget(null);
+    setPaletteDragSize(null);
 
     if (!typeId) {
       return;
@@ -222,6 +248,7 @@ export default function App() {
   function handleDragCancel() {
     setActiveDragItem(null);
     setActiveDropTarget(null);
+    setPaletteDragSize(null);
   }
 
   return (
@@ -248,6 +275,7 @@ export default function App() {
             selectedCourseTypeId={selectedCourseTypeId}
             onSelectCourseType={setSelectedCourseTypeId}
             activeDragItem={activeDragItem}
+            onPaletteDragStart={handlePaletteDragStart}
           />
 
           <section className="main-column">
@@ -276,6 +304,7 @@ export default function App() {
               activeDropTarget={activeDropTarget}
               onCellClick={handleCellClick}
               onRemoveBlock={handleRemoveCourse}
+              recentPlacement={recentPlacement}
             />
 
             <div className="panel">
@@ -289,10 +318,9 @@ export default function App() {
       </div>
 
       <DragOverlay dropAnimation={null}>
-        <DragPreview
+        <DragPreview  
           dragItem={activeDragItem}
           courseTypes={courseTypes}
-          slots={semester.slots}
         />
       </DragOverlay>
     </DndContext>
