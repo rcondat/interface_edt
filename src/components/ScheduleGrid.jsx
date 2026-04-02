@@ -1,7 +1,60 @@
-import { useDroppable } from "@dnd-kit/core";
-import { getMergedBlocksForDay, durationLabel } from "../utils/schedule";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import {
+  durationLabel,
+  getActiveGrid,
+  getCourseTypesById,
+  getMergedBlocksForDay,
+} from "../planner/selectors";
 
 const SLOT_HEIGHT = 72;
+
+function getPreviewState({
+  activeGrid,
+  previewAnchor,
+  currentDayIndex,
+  currentSlotIndex,
+  previewDuration,
+  ignoreBlock,
+  slotCount,
+}) {
+  if (!previewAnchor || previewDuration <= 0) {
+    return { isPreview: false, isValid: false };
+  }
+
+  const { dayIndex: anchorDayIndex, slotIndex: anchorSlotIndex } = previewAnchor;
+
+  if (
+    currentDayIndex !== anchorDayIndex ||
+    currentSlotIndex < anchorSlotIndex ||
+    currentSlotIndex >= anchorSlotIndex + previewDuration
+  ) {
+    return { isPreview: false, isValid: false };
+  }
+
+  if (anchorSlotIndex + previewDuration > slotCount) {
+    return { isPreview: true, isValid: false };
+  }
+
+  for (let i = 0; i < previewDuration; i += 1) {
+    const inspectedSlot = anchorSlotIndex + i;
+    const cell = activeGrid[anchorDayIndex]?.[inspectedSlot];
+
+    if (!cell) continue;
+
+    if (
+      ignoreBlock &&
+      anchorDayIndex === ignoreBlock.dayIndex &&
+      inspectedSlot >= ignoreBlock.startSlot &&
+      inspectedSlot < ignoreBlock.startSlot + ignoreBlock.durationSlots
+    ) {
+      continue;
+    }
+
+    return { isPreview: true, isValid: false };
+  }
+
+  return { isPreview: true, isValid: true };
+}
 
 function DroppableCell({
   day,
@@ -10,8 +63,13 @@ function DroppableCell({
   slotIndex,
   selectedCourseTypeId,
   onCellClick,
+  activeGrid,
+  previewAnchor,
+  previewDuration,
+  ignoreBlock,
+  slotCount,
 }) {
-  const { isOver, setNodeRef } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: `cell-${dayIndex}-${slotIndex}`,
     data: {
       dayIndex,
@@ -19,10 +77,27 @@ function DroppableCell({
     },
   });
 
-  const isSelectedMode = Boolean(selectedCourseTypeId);
+  let className =
+    selectedCourseTypeId ? "grid-cell grid-cell-selectable" : "grid-cell";
 
-  let className = isSelectedMode ? "grid-cell grid-cell-selectable" : "grid-cell";
-  if (isOver) className += " grid-cell-over";
+    const gridPreviewAnchor =
+    previewAnchor?.dropzone === "sidebar" ? null : previewAnchor;
+
+    const previewState = getPreviewState({
+    activeGrid,
+    previewAnchor: gridPreviewAnchor,
+    currentDayIndex: dayIndex,
+    currentSlotIndex: slotIndex,
+    previewDuration,
+    ignoreBlock,
+    slotCount,
+    });
+
+  if (previewState.isPreview) {
+    className += previewState.isValid
+      ? " grid-cell-preview-valid"
+      : " grid-cell-preview-invalid";
+  }
 
   return (
     <button
@@ -31,11 +106,83 @@ function DroppableCell({
       className={className}
       onClick={() => onCellClick(dayIndex, slotIndex)}
       title={
-        isSelectedMode
-          ? `Placer sur ${day} - ${slot.label}`
-          : `${day} - ${slot.label}`
+        selectedCourseTypeId ? `Placer sur ${day} - ${slot.label}` : `${day} - ${slot.label}`
       }
     />
+  );
+}
+
+function DraggableBlock({
+  block,
+  dayIndex,
+  slots,
+  course,
+  onRemoveBlock,
+}) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `block-${dayIndex}-${block.startSlot}-${block.typeId}`,
+    data: {
+      source: "grid",
+      typeId: block.typeId,
+      fromDayIndex: dayIndex,
+      fromStartSlot: block.startSlot,
+    },
+  });
+
+  const top = block.startSlot * SLOT_HEIGHT + 6;
+  const height = block.durationSlots * SLOT_HEIGHT - 12;
+  const firstSlot = slots[block.startSlot];
+  const lastSlot = slots[block.startSlot + block.durationSlots - 1];
+
+  const style = {
+    top: `${top}px`,
+    height: `${height}px`,
+    backgroundColor: course.color,
+    opacity: isDragging ? 0.35 : 1,
+  };
+
+  if (transform) {
+    style.transform = `translate3d(${transform.x}px, ${transform.y}px, 0)`;
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="course-block"
+      style={style}
+      title={course.label}
+      {...listeners}
+      {...attributes}
+    >
+      <button
+        type="button"
+        className="course-block-delete"
+        onPointerDown={(event) => {
+          event.stopPropagation();
+        }}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onRemoveBlock({
+            dayIndex,
+            startSlot: block.startSlot,
+            typeId: block.typeId,
+          });
+        }}
+        aria-label={`Supprimer ${course.label}`}
+        title={`Supprimer ${course.label}`}
+      >
+        ×
+      </button>
+
+      <div className="course-block-title">{course.label}</div>
+      <div className="course-block-meta">
+        {firstSlot.start} → {lastSlot.end}
+      </div>
+      <div className="course-block-foot">
+        <span>{durationLabel(block.durationSlots)}</span>
+      </div>
+    </div>
   );
 }
 
@@ -46,14 +193,27 @@ export default function ScheduleGrid({
   activeWeekId,
   courseTypes,
   selectedCourseTypeId,
+  activeDragItem,
+  activeDropTarget,
   onCellClick,
-  onBlockClick,
+  onRemoveBlock,
 }) {
-  const courseTypesById = Object.fromEntries(
-    courseTypes.map((course) => [course.id, course])
-  );
+  const courseTypesById = getCourseTypesById(courseTypes);
+  const activeGrid = getActiveGrid(assignments, activeWeekId);
 
-  const activeGrid = assignments[activeWeekId] ?? {};
+  const draggedCourse =
+    activeDragItem?.typeId ? courseTypesById[activeDragItem.typeId] : null;
+
+  const previewDuration = draggedCourse?.durationSlots ?? 0;
+
+  const ignoreBlock =
+    activeDragItem?.source === "grid" && draggedCourse
+      ? {
+          dayIndex: activeDragItem.fromDayIndex,
+          startSlot: activeDragItem.fromStartSlot,
+          durationSlots: draggedCourse.durationSlots,
+        }
+      : null;
 
   return (
     <div className="panel">
@@ -103,44 +263,26 @@ export default function ScheduleGrid({
                       slotIndex={slotIndex}
                       selectedCourseTypeId={selectedCourseTypeId}
                       onCellClick={onCellClick}
+                      activeGrid={activeGrid}
+                      previewAnchor={activeDropTarget}
+                      previewDuration={previewDuration}
+                      ignoreBlock={ignoreBlock}
+                      slotCount={slots.length}
                     />
                   ))}
 
                   {blocks.map((block) => {
                     const course = courseTypesById[block.typeId];
-                    const top = block.startSlot * SLOT_HEIGHT + 6;
-                    const height = block.durationSlots * SLOT_HEIGHT - 12;
-                    const firstSlot = slots[block.startSlot];
-                    const lastSlot = slots[block.startSlot + block.durationSlots - 1];
 
                     return (
-                      <button
+                      <DraggableBlock
                         key={`${dayIndex}-${block.typeId}-${block.startSlot}`}
-                        type="button"
-                        className="course-block"
-                        style={{
-                          top: `${top}px`,
-                          height: `${height}px`,
-                          backgroundColor: course.color,
-                        }}
-                        onClick={() =>
-                          onBlockClick({
-                            dayIndex,
-                            startSlot: block.startSlot,
-                            typeId: block.typeId,
-                          })
-                        }
-                        title={`Supprimer ${course.label}`}
-                      >
-                        <div className="course-block-title">{course.label}</div>
-                        <div className="course-block-meta">
-                          {firstSlot.start} → {lastSlot.end}
-                        </div>
-                        <div className="course-block-foot">
-                          <span>{durationLabel(block.durationSlots)}</span>
-                          <span className="course-block-remove">Supprimer</span>
-                        </div>
-                      </button>
+                        block={block}
+                        dayIndex={dayIndex}
+                        slots={slots}
+                        course={course}
+                        onRemoveBlock={onRemoveBlock}
+                      />
                     );
                   })}
                 </div>
