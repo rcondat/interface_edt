@@ -1,5 +1,6 @@
 import { useDraggable } from "@dnd-kit/core";
 import { SLOT_HEIGHT } from "../../planner/constants";
+import { buildTeacherShortName } from "../../planner/teacherManagement";
 
 export default function DraggableBlock({
   block,
@@ -9,6 +10,7 @@ export default function DraggableBlock({
   onRemoveBlock,
   onSelectBlock,
   isRecentlyPlaced = false,
+  selectedTeacherId = null,
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `block-${dayIndex}-${block.startSlot}-${block.typeId}`,
@@ -33,16 +35,27 @@ export default function DraggableBlock({
       : null;
 
   const subtitle = assignedTeacher
-    ? assignedTeacher.shortName
+    ? buildTeacherShortName(assignedTeacher)
     : singleTeacher
-      ? singleTeacher.shortName
+      ? buildTeacherShortName(singleTeacher)
       : "";
+
+  const isImplicitSingleTeacherMatch =
+    !block.assignedTeacherId &&
+    course.teacherIds?.length === 1 &&
+    course.teacherIds[0] === selectedTeacherId;
+
+  const isTeacherRelevant =
+    !selectedTeacherId ||
+    block.assignedTeacherId === selectedTeacherId ||
+    isImplicitSingleTeacherMatch;
 
   const style = {
     top: `${top}px`,
     height: `${height}px`,
     backgroundColor: course.color,
     visibility: isDragging ? "hidden" : "visible",
+    opacity: isTeacherRelevant ? 1 : 0.18,
   };
 
   if (transform) {

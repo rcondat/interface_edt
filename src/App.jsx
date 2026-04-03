@@ -23,12 +23,27 @@ import {
   removeCourse,
 } from "./planner/actions";
 import { validateDrop } from "./planner/preview";
+import AddTeacherModal from "./components/AddTeacherModal";
+import TeacherPanel from "./components/TeacherPanel";
+import ConfirmDialog from "./components/ConfirmDialog";
+import TeacherDetailsPanel from "./components/TeacherDetailsPanel";
+import {
+  addUnavailabilityToTeacher,
+  removeUnavailabilityFromTeacher,
+  removeTeacherFromAssignments,
+  removeTeacherFromCourseTypes,
+} from "./planner/teacherManagement";
+
 
 export default function App() {
   const [recentPlacement, setRecentPlacement] = useState(null);
   const [paletteDragSize, setPaletteDragSize] = useState(null);
+  const [isAddTeacherModalOpen, setIsAddTeacherModalOpen] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState(null);
+  const [teacherToDelete, setTeacherToDelete] = useState(null);
 
-  const [teachers] = useState(demoTeachers);
+  const [teachers, setTeachers] = useState(demoTeachers);
+  const [courseTypes, setCourseTypes] = useState(demoCourseTypes);
   const [selectedItem, setSelectedItem] = useState(null);
   const teacherMap = useMemo(() => getTeacherMap(teachers), [teachers]);
   const [pendingTeacherAssignments, setPendingTeacherAssignments] = useState({});
@@ -41,7 +56,6 @@ export default function App() {
   );
 
   const [semester] = useState(demoSemester);
-  const [courseTypes] = useState(demoCourseTypes);
   const [activeWeekId, setActiveWeekId] = useState(demoSemester.weeks[0].id);
   const [assignments, setAssignments] = useState(buildDemoAssignments);
   const [selectedCourseTypeId, setSelectedCourseTypeId] = useState(null);
@@ -76,6 +90,63 @@ export default function App() {
     );
   }
 
+  function handleAddTeacher(newTeacher) {
+    setTeachers((prev) => [...prev, newTeacher]);
+    setMessage(`Intervenant ajouté : ${newTeacher.firstName} ${newTeacher.lastName}.`);
+  }
+  const selectedTeacher =
+    selectedTeacherId ? teacherMap[selectedTeacherId] ?? null : null;
+
+  function handleAddTeacherUnavailability(rule) {
+    if (!selectedTeacherId) return;
+
+    setTeachers((prev) =>
+      addUnavailabilityToTeacher(prev, selectedTeacherId, rule)
+    );
+    setMessage("Indisponibilité ajoutée.");
+  }
+
+  function handleRemoveTeacherUnavailability(ruleId) {
+    if (!selectedTeacherId) return;
+
+    setTeachers((prev) =>
+      removeUnavailabilityFromTeacher(prev, selectedTeacherId, ruleId)
+    );
+    setMessage("Indisponibilité supprimée.");
+  }
+
+  function handleConfirmDeleteTeacher() {
+    if (!teacherToDelete) return;
+
+    setAssignments((prev) =>
+      removeTeacherFromAssignments(prev, teacherToDelete.id)
+    );
+
+    setCourseTypes((prev) =>
+      removeTeacherFromCourseTypes(prev, teacherToDelete.id)
+    );
+
+    setTeachers((prev) =>
+      prev.filter((teacher) => teacher.id !== teacherToDelete.id)
+    );
+
+    setPendingTeacherAssignments((prev) => {
+      const next = { ...prev };
+      Object.keys(next).forEach((courseTypeId) => {
+        if (next[courseTypeId] === teacherToDelete.id) {
+          delete next[courseTypeId];
+        }
+      });
+      return next;
+    });
+
+    if (selectedTeacherId === teacherToDelete.id) {
+      setSelectedTeacherId(null);
+    }
+
+    setTeacherToDelete(null);
+    setMessage("Intervenant supprimé.");
+  }
 
   function handleSetPendingTeacher({ typeId, teacherId }) {
     setPendingTeacherAssignments((prev) => ({
@@ -355,8 +426,6 @@ export default function App() {
       return;
     }
 
-    // ✅ Placement autorisé
-
     if (source === "palette") {
       handlePlaceCourse(typeId, dayIndex, slotIndex);
       return;
@@ -390,9 +459,19 @@ export default function App() {
     >
       <div className="app-shell">
         <header className="topbar">
-          <div>
-            <h1>Planificateur EDT semestre</h1>
-            <p>V4 : déplacement des blocs déjà placés.</p>
+          <div className="topbar-row">
+            <div>
+              <h1>Planificateur EDT semestre</h1>
+              <p>V4 : déplacement des blocs déjà placés.</p>
+            </div>
+
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => setIsAddTeacherModalOpen(true)}
+            >
+              + Ajouter un intervenant
+            </button>
           </div>
         </header>
 
@@ -440,6 +519,7 @@ export default function App() {
               teacherMap={teacherMap}
               recentPlacement={recentPlacement}
               pendingTeacherAssignments={pendingTeacherAssignments}
+              selectedTeacherId={selectedTeacherId}
             />
 
             <div className="panel">
@@ -450,16 +530,33 @@ export default function App() {
             </div>
           </section>
 
-          <CourseDetailsPanel
-            selectedItem={selectedItem}
-            courseTypes={courseTypes}
-            teachers={teachers}
-            assignments={assignments}
-            activeWeek={activeWeek}
-            onAssignTeacher={handleAssignTeacher}
-            pendingTeacherAssignments={pendingTeacherAssignments}
-            onSetPendingTeacher={handleSetPendingTeacher}
-          />
+          <div className="right-column">
+            <CourseDetailsPanel
+              selectedItem={selectedItem}
+              courseTypes={courseTypes}
+              teachers={teachers}
+              assignments={assignments}
+              activeWeek={activeWeek}
+              onAssignTeacher={handleAssignTeacher}
+              pendingTeacherAssignments={pendingTeacherAssignments}
+              onSetPendingTeacher={handleSetPendingTeacher}
+            />
+
+            <TeacherPanel
+              teachers={teachers}
+              selectedTeacherId={selectedTeacherId}
+              onSelectTeacher={setSelectedTeacherId}
+              onRequestDeleteTeacher={setTeacherToDelete}
+            />
+
+            <TeacherDetailsPanel
+              teacher={selectedTeacher}
+              weeks={semester.weeks}
+              slots={semester.slots}
+              onAddUnavailability={handleAddTeacherUnavailability}
+              onRemoveUnavailability={handleRemoveTeacherUnavailability}
+            />
+          </div>
         </main>
       </div>
 
@@ -470,6 +567,26 @@ export default function App() {
           teacherMap={teacherMap}
         />
       </DragOverlay>
+      <AddTeacherModal
+        isOpen={isAddTeacherModalOpen}
+        onClose={() => setIsAddTeacherModalOpen(false)}
+        onSubmit={handleAddTeacher}
+        weeks={semester.weeks}
+        slots={semester.slots}
+      />
+
+      <ConfirmDialog
+        isOpen={Boolean(teacherToDelete)}
+        title="Supprimer l’intervenant"
+        message={
+          teacherToDelete
+          ? `Supprimer ${teacherToDelete.firstName} ${teacherToDelete.lastName} ? Cette action désaffectera aussi tous ses créneaux et retirera son nom des cours liés.`
+            : ""
+        }
+        onCancel={() => setTeacherToDelete(null)}
+        onConfirm={handleConfirmDeleteTeacher}
+      />
     </DndContext>
+    
   );
 }

@@ -1,8 +1,8 @@
 export const demoTeachers = [
   {
     id: "t-durand",
-    name: "Jean Durand",
-    shortName: "J. Durand",
+    firstName: "Jean",
+    lastName: "Durand",
     unavailabilities: [
       {
         id: "u-durand-1",
@@ -23,8 +23,8 @@ export const demoTeachers = [
   },
   {
     id: "t-martin",
-    name: "Claire Martin",
-    shortName: "C. Martin",
+    firstName: "Claire",
+    lastName: "Martin",
     unavailabilities: [
       {
         id: "u-martin-1",
@@ -38,8 +38,8 @@ export const demoTeachers = [
   },
   {
     id: "t-bernard",
-    name: "Luc Bernard",
-    shortName: "L. Bernard",
+    firstName: "Luc",
+    lastName: "Bernard",
     unavailabilities: [
       {
         id: "u-bernard-1",

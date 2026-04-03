@@ -3,6 +3,10 @@ import {
   getCourseTeachers,
   getTeacherOptionsForBlock,
 } from "../planner/teachers";
+import {
+  buildTeacherDisplayName,
+  buildTeacherShortName,
+} from "../planner/teacherManagement";
 
 export default function CourseDetailsPanel({
   selectedItem,
@@ -49,7 +53,8 @@ export default function CourseDetailsPanel({
       : "";
 
   const gridTeacherValue = assignedTeacher?.id ?? "";
-
+  const hasSingleTeacher = linkedTeachers.length === 1;
+  
   return (
     <aside className="panel details-panel">
       <div className="panel-header">
@@ -80,7 +85,7 @@ export default function CourseDetailsPanel({
                 ) : (
                   <select
                     className="teacher-select"
-                    value={paletteTeacherValue}
+                    value={hasSingleTeacher ? linkedTeachers[0].id : paletteTeacherValue}
                     onChange={(event) => {
                       const teacherId = event.target.value || null;
                       onSetPendingTeacher?.({
@@ -89,10 +94,10 @@ export default function CourseDetailsPanel({
                       });
                     }}
                   >
-                    <option value="">Aucun</option>
+                    {!hasSingleTeacher && <option value="">Aucun</option>}
                     {linkedTeachers.map((teacher) => (
                       <option key={teacher.id} value={teacher.id}>
-                        {teacher.name} ({teacher.shortName})
+                        {buildTeacherDisplayName(teacher)} ({buildTeacherShortName(teacher)})
                       </option>
                     ))}
                   </select>
@@ -102,7 +107,11 @@ export default function CourseDetailsPanel({
               ) : (
                 <select
                   className="teacher-select"
-                  value={gridTeacherValue}
+                  value={
+                    hasSingleTeacher
+                      ? linkedTeachers[0].id
+                      : gridTeacherValue
+                  }
                   onChange={(event) => {
                     const teacherId = event.target.value || null;
                     onAssignTeacher?.({
@@ -113,14 +122,14 @@ export default function CourseDetailsPanel({
                     });
                   }}
                 >
-                  <option value="">Aucun</option>
+                  {!hasSingleTeacher && <option value="">Aucun</option>}
                   {teacherOptions.map(({ teacher, available }) => (
                     <option
                       key={teacher.id}
                       value={teacher.id}
                       disabled={!available}
                     >
-                      {teacher.name}
+                      {buildTeacherShortName(teacher)}
                       {!available ? " — indisponible" : ""}
                     </option>
                   ))}

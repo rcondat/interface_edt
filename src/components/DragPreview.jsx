@@ -1,16 +1,17 @@
 import { SLOT_HEIGHT } from "../planner/constants";
+import { buildTeacherShortName } from "../planner/teacherManagement";
 
 function getBlockSubtitle({ dragItem, courseType, teacherMap }) {
   const assignedTeacher =
     dragItem?.assignedTeacherId ? teacherMap[dragItem.assignedTeacherId] : null;
 
   if (assignedTeacher) {
-    return assignedTeacher.shortName;
+    return buildTeacherShortName(assignedTeacher);
   }
 
   if (courseType.teacherIds?.length === 1) {
     const singleTeacher = teacherMap[courseType.teacherIds[0]];
-    return singleTeacher?.shortName ?? "";
+    return singleTeacher? buildTeacherShortName(singleTeacher) : "";
   }
 
   return "";

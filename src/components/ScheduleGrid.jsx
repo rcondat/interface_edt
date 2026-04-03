@@ -25,6 +25,7 @@ export default function ScheduleGrid({
   teacherMap,
   recentPlacement,
   pendingTeacherAssignments,
+  selectedTeacherId,
 }) {
   const courseTypesById = getCourseTypesById(courseTypes);
   const activeGrid = getActiveGrid(assignments, activeWeekId);
@@ -131,6 +132,7 @@ export default function ScheduleGrid({
                           recentPlacement.startSlot === block.startSlot &&
                           recentPlacement.typeId === block.typeId
                         }
+                        selectedTeacherId={selectedTeacherId}
                       />
                     );
                   })}
