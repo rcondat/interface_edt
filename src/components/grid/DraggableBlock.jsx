@@ -5,6 +5,7 @@ import { buildTeacherShortName } from "../../planner/teacherManagement";
 export default function DraggableBlock({
   block,
   dayIndex,
+  weekId,
   course,
   teacherMap,
   onRemoveBlock,
@@ -70,7 +71,7 @@ export default function DraggableBlock({
       title={course.label}
       onClick={() =>
         onSelectBlock?.({
-          source: "grid",
+          weekId,
           typeId: block.typeId,
           dayIndex,
           startSlot: block.startSlot,

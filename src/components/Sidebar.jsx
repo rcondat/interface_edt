@@ -7,7 +7,7 @@ function PaletteTile({
   isSelected,
   onSelectCourseType,
   onPaletteDragStart,
-  onSelectPaletteItem,
+  onSelectPaletteCourse,
 }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: `palette-${course.id}`,
@@ -28,11 +28,8 @@ function PaletteTile({
       type="button"
       className={isSelected ? "tile tile-selected" : "tile"}
       onClick={() => {
-        onSelectCourseType(isSelected ? null : course.id);
-        onSelectPaletteItem?.({
-          source: "palette",
-          typeId: course.id,
-        });
+        onSelectCourseType(course.id);
+        onSelectPaletteCourse?.(course.id);
       }}
       onPointerDown={() => {
         const rect = tileRef.current?.getBoundingClientRect();
@@ -67,7 +64,7 @@ export default function Sidebar({
   onSelectCourseType,
   activeDragItem,
   onPaletteDragStart,
-  onSelectPaletteItem,
+  onSelectPaletteCourse,
 }) {
   const groups = groupPalette(courseTypes, assignments);
   const isPaletteDrag = activeDragItem?.source === "palette";
@@ -129,7 +126,7 @@ export default function Sidebar({
                   isSelected={selectedCourseTypeId === course.id}
                   onSelectCourseType={onSelectCourseType}
                   onPaletteDragStart={onPaletteDragStart}
-                  onSelectPaletteItem={onSelectPaletteItem}
+                  onSelectPaletteCourse={onSelectPaletteCourse}
                 />
               ))}
             </section>

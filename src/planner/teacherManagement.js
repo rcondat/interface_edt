@@ -116,3 +116,24 @@ export function removeUnavailabilityFromTeacher(teachers, teacherId, unavailabil
       : teacher
   );
 }
+
+export function normalizeTeacherNames({ firstName, lastName }) {
+  return {
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+  };
+}
+
+export function updateTeacherIdentity(teachers, teacherId, { firstName, lastName }) {
+  const normalized = normalizeTeacherNames({ firstName, lastName });
+
+  return teachers.map((teacher) =>
+    teacher.id === teacherId
+      ? {
+          ...teacher,
+          firstName: normalized.firstName,
+          lastName: normalized.lastName,
+        }
+      : teacher
+  );
+}

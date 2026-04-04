@@ -111,6 +111,29 @@ h3 {
   min-width: 0;
 }
 
+.details-panel-body {
+  display: grid;
+  gap: 18px;
+}
+
+.panel-section-title {
+  font-size: 1.1rem;
+  font-weight: 750;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+.details-divider {
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--line) 12%,
+    var(--line) 88%,
+    transparent 100%
+  );
+}
 /* =========================================================
    4. Panels / blocs génériques
    ========================================================= */
@@ -961,4 +984,44 @@ h3 {
 
 .form-field span {
   font-weight: 650;
+}
+
+.right-column {
+  grid-column: 3;
+  display: grid;
+  gap: 22px;
+  align-self: start;
+  min-width: 0;
+}
+
+.right-column > .panel {
+  min-width: 0;
+}
+
+.editor-tile-hidden {
+  display: none;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.section-header h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.teacher-identity-form {
+  display: grid;
+  gap: 14px;
+}
+
+.primary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }

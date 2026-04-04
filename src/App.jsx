@@ -32,8 +32,8 @@ import {
   removeUnavailabilityFromTeacher,
   removeTeacherFromAssignments,
   removeTeacherFromCourseTypes,
+  updateTeacherIdentity,
 } from "./planner/teacherManagement";
-
 
 export default function App() {
   const [recentPlacement, setRecentPlacement] = useState(null);
@@ -44,7 +44,7 @@ export default function App() {
 
   const [teachers, setTeachers] = useState(demoTeachers);
   const [courseTypes, setCourseTypes] = useState(demoCourseTypes);
-  const [selectedItem, setSelectedItem] = useState(null);
+  const [selectedBlock, setSelectedBlock] = useState(null);
   const teacherMap = useMemo(() => getTeacherMap(teachers), [teachers]);
   const [pendingTeacherAssignments, setPendingTeacherAssignments] = useState({});
   const sensors = useSensors(
@@ -64,11 +64,43 @@ export default function App() {
   const [message, setMessage] = useState(
     "V4 : glisse une tuile ou un bloc déjà placé."
   );
-
+  const [selectedPaletteCourseId, setSelectedPaletteCourseId] = useState(null);
+  const [activeEditorPanel, setActiveEditorPanel] = useState(null);
   const activeWeek = useMemo(
     () => getActiveWeek(semester, activeWeekId),
     [semester, activeWeekId]
   );
+
+  function showTeacherPanel(teacherId) {
+    setSelectedTeacherId(teacherId);
+    setActiveEditorPanel("teacher");
+  }
+
+  function showCoursePanelFromPalette(courseTypeId) {
+    setSelectedPaletteCourseId(courseTypeId);
+    setSelectedBlock(null);
+    setSelectedCourseTypeId(courseTypeId);
+    setActiveEditorPanel("course");
+  }
+
+  function showCoursePanelFromBlock(block) {
+    setSelectedBlock(block);
+    setSelectedPaletteCourseId(null);
+    setActiveEditorPanel("course");
+  }
+
+  function showWeekPanel(weekId) {
+    setActiveWeekId(weekId);
+    setActiveEditorPanel("week");
+  }
+
+  function handleRenameTeacher({ teacherId, firstName, lastName }) {
+    setTeachers((prev) =>
+      updateTeacherIdentity(prev, teacherId, { firstName, lastName })
+    );
+
+    setMessage("Intervenant mis à jour.");
+  }
 
   function handleAssignTeacher({ dayIndex, startSlot, durationSlots, teacherId }) {
     const result = assignTeacherToBlock({
@@ -148,14 +180,6 @@ export default function App() {
     setMessage("Intervenant supprimé.");
   }
 
-  function handleSetPendingTeacher({ typeId, teacherId }) {
-    setPendingTeacherAssignments((prev) => ({
-      ...prev,
-      [typeId]: teacherId,
-    }));
-  }
-
-
   function handlePaletteDragStart(typeId, width, height) {
     setPaletteDragSize({
       typeId,
@@ -191,12 +215,6 @@ export default function App() {
     }
 
     setAssignments(result.assignments);
-    setSelectedItem({
-      source: "grid",
-      typeId: courseType.id,
-      dayIndex,
-      startSlot: slotIndex,
-    });
     setRecentPlacement({
       weekId: activeWeekId,
       dayIndex,
@@ -239,12 +257,19 @@ export default function App() {
     }
 
     setAssignments(result.assignments);
-    setSelectedItem({
-      source: "grid",
-      typeId: courseType.id,
-      dayIndex: toDayIndex,
-      startSlot: toSlotIndex,
-    });
+    setSelectedBlock((prev) =>
+      prev &&
+      prev.weekId === activeWeekId &&
+      prev.typeId === courseType.id &&
+      prev.dayIndex === fromDayIndex &&
+      prev.startSlot === fromStartSlot
+        ? {
+            ...prev,
+            dayIndex: toDayIndex,
+            startSlot: toSlotIndex,
+          }
+        : prev
+    );
     setRecentPlacement(null);
     setMessage(
       `${courseType.label} déplacé vers ${DAYS[toDayIndex]} à ${semester.slots[toSlotIndex].start}.`
@@ -270,7 +295,15 @@ export default function App() {
     });
 
     setAssignments(result.assignments);
-    setSelectedItem(null);
+    setSelectedBlock((prev) =>
+      prev &&
+      prev.weekId === activeWeekId &&
+      prev.typeId === typeId &&
+      prev.dayIndex === dayIndex &&
+      prev.startSlot === startSlot
+        ? null
+        : prev
+    );
     setRecentPlacement(null);
     setMessage(
       `${courseType.label} supprimé de ${DAYS[dayIndex]} à ${semester.slots[startSlot].start}.`
@@ -449,6 +482,12 @@ export default function App() {
     setPaletteDragSize(null);
   }
 
+  function handleSelectBlock(block) {
+    setSelectedBlock(block);
+    setSelectedPaletteCourseId(null);
+    setActiveEditorPanel("course");
+  }
+
   return (
     <DndContext
       sensors={sensors}
@@ -484,7 +523,7 @@ export default function App() {
             onSelectCourseType={setSelectedCourseTypeId}
             activeDragItem={activeDragItem}
             onPaletteDragStart={handlePaletteDragStart}
-            onSelectPaletteItem={setSelectedItem}
+            onSelectPaletteCourse={showCoursePanelFromPalette}
           />
 
           <section className="main-column">
@@ -497,30 +536,29 @@ export default function App() {
                 <WeekTabs
                   weeks={semester.weeks}
                   activeWeekId={activeWeekId}
-                  onChange={setActiveWeekId}
+                  onChange={showWeekPanel}
                 />
               </div>
+              <ScheduleGrid
+                days={DAYS}
+                slots={semester.slots}
+                assignments={assignments}
+                activeWeekId={activeWeekId}
+                activeWeek={activeWeek}
+                courseTypes={courseTypes}
+                teachers={teachers}
+                selectedCourseTypeId={selectedCourseTypeId}
+                activeDragItem={activeDragItem}
+                activeDropTarget={activeDropTarget}
+                onCellClick={handleCellClick}
+                onRemoveBlock={handleRemoveCourse}
+                onSelectBlock={handleSelectBlock}
+                teacherMap={teacherMap}
+                recentPlacement={recentPlacement}
+                pendingTeacherAssignments={pendingTeacherAssignments}
+                selectedTeacherId={selectedTeacherId}
+              />
             </div>
-
-            <ScheduleGrid
-              days={DAYS}
-              slots={semester.slots}
-              assignments={assignments}
-              activeWeekId={activeWeekId}
-              activeWeek={activeWeek}
-              courseTypes={courseTypes}
-              teachers={teachers}
-              selectedCourseTypeId={selectedCourseTypeId}
-              activeDragItem={activeDragItem}
-              activeDropTarget={activeDropTarget}
-              onCellClick={handleCellClick}
-              onRemoveBlock={handleRemoveCourse}
-              onSelectBlock={setSelectedItem}
-              teacherMap={teacherMap}
-              recentPlacement={recentPlacement}
-              pendingTeacherAssignments={pendingTeacherAssignments}
-              selectedTeacherId={selectedTeacherId}
-            />
 
             <div className="panel">
               <div className="panel-header">
@@ -531,31 +569,48 @@ export default function App() {
           </section>
 
           <div className="right-column">
-            <CourseDetailsPanel
-              selectedItem={selectedItem}
-              courseTypes={courseTypes}
-              teachers={teachers}
-              assignments={assignments}
-              activeWeek={activeWeek}
-              onAssignTeacher={handleAssignTeacher}
-              pendingTeacherAssignments={pendingTeacherAssignments}
-              onSetPendingTeacher={handleSetPendingTeacher}
-            />
-
             <TeacherPanel
               teachers={teachers}
               selectedTeacherId={selectedTeacherId}
-              onSelectTeacher={setSelectedTeacherId}
+              onSelectTeacher={showTeacherPanel}
               onRequestDeleteTeacher={setTeacherToDelete}
             />
 
-            <TeacherDetailsPanel
-              teacher={selectedTeacher}
-              weeks={semester.weeks}
-              slots={semester.slots}
-              onAddUnavailability={handleAddTeacherUnavailability}
-              onRemoveUnavailability={handleRemoveTeacherUnavailability}
-            />
+            {activeEditorPanel === "teacher" && selectedTeacher && (
+              <TeacherDetailsPanel
+                teacher={selectedTeacher}
+                weeks={semester.weeks}
+                slots={semester.slots}
+                onAddUnavailability={handleAddTeacherUnavailability}
+                onRemoveUnavailability={handleRemoveTeacherUnavailability}
+                onRenameTeacher={handleRenameTeacher}
+              />
+            )}
+
+            {activeEditorPanel === "course" && (
+              <CourseDetailsPanel
+                selectedBlock={selectedBlock}
+                selectedPaletteCourseId={selectedPaletteCourseId}
+                courseTypes={courseTypes}
+                teachers={teachers}
+                assignments={assignments}
+                activeWeek={activeWeek}
+                onAssignTeacher={handleAssignTeacher}
+              />
+            )}
+
+            {activeEditorPanel === "week" && (
+              <section className="panel details-panel">
+                <div className="panel-header">
+                  <h2>Modification de la semaine</h2>
+                </div>
+                <div className="panel-body">
+                  <div className="empty-box">
+                    Cette tuile sera conçue plus tard.
+                  </div>
+                </div>
+              </section>
+            )}
           </div>
         </main>
       </div>

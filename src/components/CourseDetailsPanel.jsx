@@ -3,140 +3,118 @@ import {
   getCourseTeachers,
   getTeacherOptionsForBlock,
 } from "../planner/teachers";
-import {
-  buildTeacherDisplayName,
-  buildTeacherShortName,
-} from "../planner/teacherManagement";
+import { buildTeacherShortName } from "../planner/teacherManagement";
 
 export default function CourseDetailsPanel({
-  selectedItem,
+  selectedBlock,
+  selectedPaletteCourseId,
   courseTypes,
   teachers,
   assignments,
   activeWeek,
   onAssignTeacher,
-  pendingTeacherAssignments,
-  onSetPendingTeacher,
 }) {
-  const courseType = selectedItem
-    ? courseTypes.find((course) => course.id === selectedItem.typeId)
+  const selectedCourseTypeId = selectedBlock?.typeId ?? selectedPaletteCourseId ?? null;
+
+  const courseType = selectedCourseTypeId
+    ? courseTypes.find((course) => course.id === selectedCourseTypeId)
     : null;
 
-  let block = null;
+  const block =
+    selectedBlock?.weekId === activeWeek.id
+      ? assignments[activeWeek.id]?.[selectedBlock.dayIndex]?.[selectedBlock.startSlot] ?? null
+      : null;
 
-  if (
-    selectedItem?.source === "grid" &&
-    assignments[activeWeek.id]?.[selectedItem.dayIndex]?.[selectedItem.startSlot]
-  ) {
-    block = assignments[activeWeek.id][selectedItem.dayIndex][selectedItem.startSlot];
+  if (!courseType) {
+    return null;
   }
 
-  const assignedTeacher = getBlockAssignedTeacher(block, teachers);
+  const linkedTeachers = getCourseTeachers(courseType, teachers);
+  const hasSingleTeacher = linkedTeachers.length === 1;
 
-  const linkedTeachers = courseType ? getCourseTeachers(courseType, teachers) : [];
+  const assignedTeacher = block
+    ? getBlockAssignedTeacher(block, teachers)
+    : null;
 
   const teacherOptions =
-    courseType && block
+    block
       ? getTeacherOptionsForBlock({
           teachers,
           courseType,
           week: activeWeek,
-          dayIndex: selectedItem.dayIndex,
-          startSlot: selectedItem.startSlot,
+          dayIndex: selectedBlock.dayIndex,
+          startSlot: selectedBlock.startSlot,
           durationSlots: block.durationSlots,
         })
       : [];
 
-  const paletteTeacherValue =
-    selectedItem?.source === "palette" && courseType
-      ? pendingTeacherAssignments?.[courseType.id] ?? ""
-      : "";
-
   const gridTeacherValue = assignedTeacher?.id ?? "";
-  const hasSingleTeacher = linkedTeachers.length === 1;
-  
+
   return (
     <aside className="panel details-panel">
-      <div className="panel-header">
-        <h2>Détails du cours</h2>
-      </div>
+      <div className="panel-body details-panel-body">
+        <div className="panel-section-title">Modification du cours</div>
 
-      <div className="panel-body">
-        {!courseType ? (
-          <div className="empty-box">
-            Sélectionne une tuile dans le menu ou un créneau placé dans la grille.
-          </div>
-        ) : (
-          <div className="details-stack">
-            <section className="details-section">
-              <div className="details-label">Cours</div>
-              <div className="details-title">{courseType.label}</div>
-              <div className="details-subtitle">
-                {courseType.subject} · {courseType.category}
-              </div>
-            </section>
+        <div className="details-stack">
+          <section className="details-section">
+            <div className="details-label">Cours</div>
+            <div className="details-title">{courseType.label}</div>
+            <div className="details-subtitle">
+              {courseType.subject} · {courseType.category}
+            </div>
+          </section>
+        </div>
 
-            <section className="details-section">
-              <div className="details-label">Intervenant affecté</div>
+        {block && (
+          <>
+            <div className="details-divider" />
 
-              {selectedItem?.source === "palette" ? (
-                linkedTeachers.length === 0 ? (
-                  <div className="details-value muted">Aucun enseignant renseigné</div>
+            <div className="panel-section-title">Modification du créneau</div>
+
+            <div className="details-stack">
+              <section className="details-section">
+                <div className="details-subtitle">
+                  Semaine {activeWeek.label} · créneau placé
+                </div>
+              </section>
+
+              <section className="details-section">
+                <div className="details-label">Intervenant affecté</div>
+
+                {teacherOptions.length === 0 ? (
+                  <div className="details-value muted">
+                    Aucun enseignant renseigné
+                  </div>
                 ) : (
                   <select
                     className="teacher-select"
-                    value={hasSingleTeacher ? linkedTeachers[0].id : paletteTeacherValue}
+                    value={hasSingleTeacher ? linkedTeachers[0].id : gridTeacherValue}
                     onChange={(event) => {
                       const teacherId = event.target.value || null;
-                      onSetPendingTeacher?.({
-                        typeId: courseType.id,
+                      onAssignTeacher?.({
+                        dayIndex: selectedBlock.dayIndex,
+                        startSlot: selectedBlock.startSlot,
+                        durationSlots: block.durationSlots,
                         teacherId,
                       });
                     }}
                   >
                     {!hasSingleTeacher && <option value="">Aucun</option>}
-                    {linkedTeachers.map((teacher) => (
-                      <option key={teacher.id} value={teacher.id}>
-                        {buildTeacherDisplayName(teacher)} ({buildTeacherShortName(teacher)})
+                    {teacherOptions.map(({ teacher, available }) => (
+                      <option
+                        key={teacher.id}
+                        value={teacher.id}
+                        disabled={!available}
+                      >
+                        {buildTeacherShortName(teacher)}
+                        {!available ? " - indisponible" : ""}
                       </option>
                     ))}
                   </select>
-                )
-              ) : teacherOptions.length === 0 ? (
-                <div className="details-value muted">Aucun enseignant renseigné</div>
-              ) : (
-                <select
-                  className="teacher-select"
-                  value={
-                    hasSingleTeacher
-                      ? linkedTeachers[0].id
-                      : gridTeacherValue
-                  }
-                  onChange={(event) => {
-                    const teacherId = event.target.value || null;
-                    onAssignTeacher?.({
-                      dayIndex: selectedItem.dayIndex,
-                      startSlot: selectedItem.startSlot,
-                      durationSlots: block.durationSlots,
-                      teacherId,
-                    });
-                  }}
-                >
-                  {!hasSingleTeacher && <option value="">Aucun</option>}
-                  {teacherOptions.map(({ teacher, available }) => (
-                    <option
-                      key={teacher.id}
-                      value={teacher.id}
-                      disabled={!available}
-                    >
-                      {buildTeacherShortName(teacher)}
-                      {!available ? " — indisponible" : ""}
-                    </option>
-                  ))}
-                </select>
-              )}
-            </section>
-          </div>
+                )}
+              </section>
+            </div>
+          </>
         )}
       </div>
     </aside>

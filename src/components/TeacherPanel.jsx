@@ -1,6 +1,5 @@
 import {
   buildTeacherDisplayName,
-  buildTeacherShortName,
   sortTeachersByLastName,
 } from "../planner/teacherManagement";
 
@@ -40,19 +39,15 @@ export default function TeacherPanel({
                   }
                 >
                   <div className="teacher-row-main">
-                    <div className="teacher-row-name">
+                    <div className="teacher-row-short">
                       {buildTeacherDisplayName(teacher)}
                     </div>
-                    <div className="teacher-row-short">{buildTeacherShortName(teacher)}</div>
                   </div>
 
                   <button
                     type="button"
                     className="teacher-row-delete"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRequestDeleteTeacher(teacher);
-                    }}
+                    onClick={() => onSelectTeacher(teacher.id)}
                     aria-label={`Supprimer ${buildTeacherDisplayName(teacher)}`}
                     title={`Supprimer ${buildTeacherDisplayName(teacher)}`}
                   >
