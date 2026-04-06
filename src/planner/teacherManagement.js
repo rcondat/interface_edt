@@ -7,6 +7,7 @@ export function sortTeachersByLastName(teachers) {
 }
 
 export function buildTeacherDisplayName(teacher) {
+  if (!teacher) return "";
   return [teacher.firstName, teacher.lastName].filter(Boolean).join(" ").trim();
 }
 
@@ -21,15 +22,20 @@ export function buildTeacherShortName(teacher) {
   return `${firstName.charAt(0)}. ${lastName}`;
 }
 
+export function normalizeTeacherNames({ firstName, lastName }) {
+  return {
+    firstName: firstName.trim(),
+    lastName: lastName.trim(),
+  };
+}
+
 export function createTeacher({
   firstName,
   lastName,
-  unavailabilities = [],
 }) {
-  const normalizedFirstName = firstName.trim();
-  const normalizedLastName = lastName.trim();
+  const normalized = normalizeTeacherNames({ firstName, lastName });
 
-  const baseId = `${normalizedFirstName}-${normalizedLastName}`
+  const baseId = `${normalized.firstName}-${normalized.lastName}`
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -38,96 +44,57 @@ export function createTeacher({
 
   return {
     id: `t-${baseId}-${Date.now()}`,
-    firstName: normalizedFirstName,
-    lastName: normalizedLastName,
-    unavailabilities,
+    firstName: normalized.firstName,
+    lastName: normalized.lastName,
   };
 }
 
-export function removeTeacherFromAssignments(assignments, teacherId) {
-  const next = structuredClone(assignments);
-
-  Object.values(next).forEach((week) => {
-    Object.values(week).forEach((daySlots) => {
-      daySlots.forEach((cell, index) => {
-        if (cell?.assignedTeacherId === teacherId) {
-          daySlots[index] = {
-            ...cell,
-            assignedTeacherId: null,
-          };
-        }
-      });
-    });
-  });
-
-  return next;
-}
-
-export function removeTeacherFromCourseTypes(courseTypes, teacherId) {
-  return courseTypes.map((courseType) => ({
-    ...courseType,
-    teacherIds: (courseType.teacherIds ?? []).filter((id) => id !== teacherId),
-  }));
-}
-
-export function createUnavailability({
-  type,
+export function createConstraint({
+  entityType,
+  entityId,
+  timeScopeType,
   dayIndex = null,
-  startSlot = 0,
-  endSlot = 1,
+  startSlotId = null,
+  endSlotId = null,
   weekIds = [],
-  startDate = "",
-  endDate = "",
-  date = "",
+  startDate = null,
+  endDate = null,
+  date = null,
+  dayId = null,
+  slotId = null,
 }) {
   return {
-    id: `u-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    type,
+    id: `constraint-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    entityType,
+    entityId,
+    timeScopeType,
     dayIndex,
-    startSlot,
-    endSlot,
+    startSlotId,
+    endSlotId,
     weekIds,
     startDate,
     endDate,
     date,
+    dayId,
+    slotId,
   };
 }
 
-export function addUnavailabilityToTeacher(teachers, teacherId, unavailability) {
-  return teachers.map((teacher) =>
-    teacher.id === teacherId
-      ? {
-          ...teacher,
-          unavailabilities: [...(teacher.unavailabilities ?? []), unavailability],
-        }
-      : teacher
-  );
+function cloneDb(db) {
+  return structuredClone(db);
 }
 
-export function removeUnavailabilityFromTeacher(teachers, teacherId, unavailabilityId) {
-  return teachers.map((teacher) =>
-    teacher.id === teacherId
-      ? {
-          ...teacher,
-          unavailabilities: (teacher.unavailabilities ?? []).filter(
-            (item) => item.id !== unavailabilityId
-          ),
-        }
-      : teacher
-  );
+export function addTeacherToDb(db, teacher) {
+  const next = cloneDb(db);
+  next.teachers.push(teacher);
+  return next;
 }
 
-export function normalizeTeacherNames({ firstName, lastName }) {
-  return {
-    firstName: firstName.trim(),
-    lastName: lastName.trim(),
-  };
-}
-
-export function updateTeacherIdentity(teachers, teacherId, { firstName, lastName }) {
+export function updateTeacherIdentityInDb(db, teacherId, { firstName, lastName }) {
+  const next = cloneDb(db);
   const normalized = normalizeTeacherNames({ firstName, lastName });
 
-  return teachers.map((teacher) =>
+  next.teachers = next.teachers.map((teacher) =>
     teacher.id === teacherId
       ? {
           ...teacher,
@@ -136,4 +103,47 @@ export function updateTeacherIdentity(teachers, teacherId, { firstName, lastName
         }
       : teacher
   );
+
+  return next;
+}
+
+export function addConstraintToDb(db, constraint) {
+  const next = cloneDb(db);
+  next.constraints.push(constraint);
+  return next;
+}
+
+export function removeConstraintFromDb(db, constraintId) {
+  const next = cloneDb(db);
+  next.constraints = next.constraints.filter((constraint) => constraint.id !== constraintId);
+  return next;
+}
+
+export function deleteTeacherFromDb(db, teacherId) {
+  const next = cloneDb(db);
+
+  next.teachers = next.teachers.filter((teacher) => teacher.id !== teacherId);
+
+  next.constraints = next.constraints.filter(
+    (constraint) =>
+      !(constraint.entityType === "teacher" && constraint.entityId === teacherId)
+  );
+
+  next.sessionInstances = next.sessionInstances.map((session) =>
+    session.teacherId === teacherId
+      ? {
+          ...session,
+          teacherId: null,
+        }
+      : session
+  );
+
+  next.requirements = next.requirements.map((requirement) => ({
+    ...requirement,
+    possibleTeacherIds: (requirement.possibleTeacherIds ?? []).filter(
+      (id) => id !== teacherId
+    ),
+  }));
+
+  return next;
 }

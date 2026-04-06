@@ -1,10 +1,13 @@
 const DAY_LABELS = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi"];
 
 function formatRule(rule, weeks, slots) {
-  const startLabel = slots[rule.startSlot]?.start ?? "";
-  const endLabel = slots[rule.endSlot - 1]?.end ?? "";
+  const startSlot = slots.find((slot) => slot.id === rule.startSlotId);
+  const endSlot = slots.find((slot) => slot.id === rule.endSlotId);
 
-  switch (rule.type) {
+  const startLabel = startSlot?.start ?? startSlot?.startTime ?? "";
+  const endLabel = endSlot?.end ?? endSlot?.endTime ?? "";
+
+  switch (rule.timeScopeType) {
     case "weekly":
       return `${DAY_LABELS[rule.dayIndex]} · ${startLabel} → ${endLabel}`;
 
@@ -19,18 +22,21 @@ function formatRule(rule, weeks, slots) {
     case "specific-date-time":
       return `${rule.date} · ${startLabel} → ${endLabel}`;
 
+    case "day":
+      return "Jour entier indisponible";
+
     default:
       return "Indisponibilité";
   }
 }
 
 export default function TeacherUnavailabilityList({
-  teacher,
+  constraints,
   weeks,
   slots,
   onRemoveUnavailability,
 }) {
-  const items = teacher?.unavailabilities ?? [];
+  const items = constraints ?? [];
 
   return (
     <div className="unavailability-list">

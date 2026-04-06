@@ -4,18 +4,18 @@ import {
   getActiveGrid,
   getCourseTypesById,
   getMergedBlocksForDay,
-} from "../planner/selectors";
+} from "../planner/gridSelectors";
 import DraggableBlock from "./grid/DraggableBlock";
 import DroppableCell from "./grid/DroppableCell";
+import { getWeekDays } from "../planner/dbSelectors";
 
 export default function ScheduleGrid({
+  db,
   days,
   slots,
   assignments,
   activeWeekId,
-  activeWeek,
   courseTypes,
-  teachers,
   selectedCourseTypeId,
   activeDragItem,
   activeDropTarget,
@@ -29,6 +29,8 @@ export default function ScheduleGrid({
 }) {
   const courseTypesById = getCourseTypesById(courseTypes);
   const activeGrid = getActiveGrid(assignments, activeWeekId);
+
+  const weekDays = getWeekDays(db, activeWeekId);
 
   const draggedCourse =
     activeDragItem?.typeId ? courseTypesById[activeDragItem.typeId] : null;
@@ -99,10 +101,11 @@ export default function ScheduleGrid({
                     previewDuration={previewDuration}
                     ignoreBlock={ignoreBlock}
                     slotCount={slots.length}
-                    teachers={teachers}
+                    db={db}
+                    weekDays={weekDays}
+                    slots={slots}
                     courseType={draggedCourse}
                     draggedBlock={draggedBlock}
-                    activeWeek={activeWeek}
                     isDragging={isDragging}
                     preselectedTeacherId={preselectedTeacherId}
                   />

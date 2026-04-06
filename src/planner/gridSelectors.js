@@ -12,51 +12,8 @@ export function getCourseTypesById(courseTypes) {
   return Object.fromEntries(courseTypes.map((course) => [course.id, course]));
 }
 
-export function getActiveWeek(semester, activeWeekId) {
-  return semester.weeks.find((week) => week.id === activeWeekId) ?? semester.weeks[0];
-}
-
 export function getActiveGrid(assignments, activeWeekId) {
   return assignments[activeWeekId] ?? {};
-}
-
-export function computePlacedCounts(assignments, courseTypes) {
-  const totals = Object.fromEntries(courseTypes.map((course) => [course.id, 0]));
-
-  Object.values(assignments).forEach((week) => {
-    Object.values(week).forEach((daySlots) => {
-      daySlots.forEach((cell) => {
-        if (cell?.typeId) totals[cell.typeId] += 1;
-      });
-    });
-  });
-
-  const result = {};
-
-  courseTypes.forEach((course) => {
-    result[course.id] = Math.floor((totals[course.id] || 0) / course.durationSlots);
-  });
-
-  return result;
-}
-
-export function groupPalette(courseTypes, assignments) {
-  const placed = computePlacedCounts(assignments, courseTypes);
-  const groups = {};
-
-  courseTypes.forEach((course) => {
-    const remaining = course.totalCount - (placed[course.id] || 0);
-
-    if (remaining <= 0) return;
-
-    if (!groups[course.category]) {
-      groups[course.category] = [];
-    }
-
-    groups[course.category].push({ ...course, remaining });
-  });
-
-  return groups;
 }
 
 export function getMergedBlocksForDay(daySlots, courseTypesById) {

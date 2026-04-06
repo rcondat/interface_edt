@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import TeacherUnavailabilityEditor from "./TeacherUnavailabilityEditor";
 import TeacherUnavailabilityList from "./TeacherUnavailabilityList";
 import {
@@ -8,20 +8,15 @@ import {
 
 export default function TeacherDetailsPanel({
   teacher,
+  constraints,
   weeks,
   slots,
   onAddUnavailability,
   onRemoveUnavailability,
   onRenameTeacher,
 }) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-
-  useEffect(() => {
-    if (!teacher) return;
-    setFirstName(teacher.firstName ?? "");
-    setLastName(teacher.lastName ?? "");
-  }, [teacher]);
+  const [firstName, setFirstName] = useState(teacher?.firstName ?? "");
+  const [lastName, setLastName] = useState(teacher?.lastName ?? "");
 
   if (!teacher) {
     return null;
@@ -111,7 +106,7 @@ export default function TeacherDetailsPanel({
         />
 
         <TeacherUnavailabilityList
-          teacher={teacher}
+          constraints={constraints}
           weeks={weeks}
           slots={slots}
           onRemoveUnavailability={onRemoveUnavailability}

@@ -1,4 +1,4 @@
-import { getTeacherAvailabilityIssue } from "./teachers";
+import { getTeacherAvailabilityIssue, isDayClosed } from "./teachers";
 
 export function getIgnoreBlock(activeDragItem, draggedCourse) {
   if (activeDragItem?.source !== "grid" || !draggedCourse) {
@@ -13,26 +13,39 @@ export function getIgnoreBlock(activeDragItem, draggedCourse) {
 }
 
 export function getCellConstraintState({
+  db,
   activeGrid,
   dayIndex,
   slotIndex,
-  teachers,
+  weekDays,
+  slots,
   courseType,
   draggedBlock,
-  activeWeek,
   preselectedTeacherId,
 }) {
   const occupied = Boolean(activeGrid?.[dayIndex]?.[slotIndex]);
 
+  const day = weekDays[dayIndex];
+  const slot = slots[slotIndex];
+
+  if (!day || !slot) {
+    return {
+      occupied,
+      teacherUnavailable: false,
+      dayClosed: false,
+    };
+  }
+
+  const dayClosed = isDayClosed(db, day.id);
+
   const teacherIssue =
-    courseType && activeWeek
+    courseType && !dayClosed
       ? getTeacherAvailabilityIssue({
-          teachers,
+          db,
           courseType,
           block: draggedBlock,
-          week: activeWeek,
-          dayIndex,
-          startSlot: slotIndex,
+          dayId: day.id,
+          startSlotId: slot.id,
           durationSlots: 1,
           preselectedTeacherId,
         })
@@ -41,10 +54,12 @@ export function getCellConstraintState({
   return {
     occupied,
     teacherUnavailable: Boolean(teacherIssue),
+    dayClosed,
   };
 }
 
 export function getPreviewState({
+  db,
   activeGrid,
   previewAnchor,
   currentDayIndex,
@@ -52,10 +67,10 @@ export function getPreviewState({
   previewDuration,
   ignoreBlock,
   slotCount,
-  teachers,
+  weekDays,
+  slots,
   courseType,
   draggedBlock,
-  activeWeek,
   preselectedTeacherId,
 }) {
   if (!previewAnchor || previewDuration <= 0) {
@@ -74,6 +89,17 @@ export function getPreviewState({
 
   if (anchorSlotIndex + previewDuration > slotCount) {
     return { isPreview: true, isValid: false, reason: "out-of-day" };
+  }
+
+  const day = weekDays[anchorDayIndex];
+  const slot = slots[anchorSlotIndex];
+
+  if (!day || !slot) {
+    return { isPreview: true, isValid: false, reason: "invalid-target" };
+  }
+
+  if (isDayClosed(db, day.id)) {
+    return { isPreview: true, isValid: false, reason: "day-closed" };
   }
 
   for (let i = 0; i < previewDuration; i += 1) {
@@ -95,12 +121,11 @@ export function getPreviewState({
   }
 
   const teacherIssue = getTeacherAvailabilityIssue({
-    teachers,
+    db,
     courseType,
     block: draggedBlock,
-    week: activeWeek,
-    dayIndex: anchorDayIndex,
-    startSlot: anchorSlotIndex,
+    dayId: day.id,
+    startSlotId: slot.id,
     durationSlots: previewDuration,
     preselectedTeacherId,
   });
@@ -117,20 +142,32 @@ export function getPreviewState({
 }
 
 export function validateDrop({
+  db,
   activeGrid,
   dayIndex,
   slotIndex,
   durationSlots,
   ignoreBlock,
   slotCount,
-  teachers,
+  weekDays,
+  slots,
   courseType,
   draggedBlock,
-  activeWeek,
   preselectedTeacherId,
 }) {
   if (slotIndex + durationSlots > slotCount) {
     return { ok: false, reason: "out-of-day" };
+  }
+
+  const day = weekDays[dayIndex];
+  const slot = slots[slotIndex];
+
+  if (!day || !slot) {
+    return { ok: false, reason: "invalid-target" };
+  }
+
+  if (isDayClosed(db, day.id)) {
+    return { ok: false, reason: "day-closed" };
   }
 
   for (let i = 0; i < durationSlots; i += 1) {
@@ -152,12 +189,11 @@ export function validateDrop({
   }
 
   const teacherIssue = getTeacherAvailabilityIssue({
-    teachers,
+    db,
     courseType,
     block: draggedBlock,
-    week: activeWeek,
-    dayIndex,
-    startSlot: slotIndex,
+    dayId: day.id,
+    startSlotId: slot.id,
     durationSlots,
     preselectedTeacherId,
   });

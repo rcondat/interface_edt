@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createUnavailability } from "../planner/teacherManagement";
 
 const TYPE_OPTIONS = [
   { value: "weekly", label: "Hebdomadaire" },
@@ -13,14 +12,18 @@ export default function TeacherUnavailabilityEditor({
   slots,
   onAddUnavailability,
 }) {
-  const [type, setType] = useState("weekly");
+  const [timeScopeType, setTimeScopeType] = useState("weekly");
   const [dayIndex, setDayIndex] = useState(0);
-  const [startSlot, setStartSlot] = useState(0);
-  const [endSlot, setEndSlot] = useState(1);
+  const [startSlotId, setStartSlotId] = useState(slots[0]?.id ?? "");
+  const [endSlotId, setEndSlotId] = useState(slots[1]?.id ?? slots[0]?.id ?? "");
   const [selectedWeekIds, setSelectedWeekIds] = useState([]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [date, setDate] = useState("");
+
+  const slotIndexById = Object.fromEntries(
+    slots.map((slot, index) => [slot.id, index])
+  );
 
   function toggleWeek(weekId) {
     setSelectedWeekIds((prev) =>
@@ -30,32 +33,52 @@ export default function TeacherUnavailabilityEditor({
     );
   }
 
-  function handleSubmit(event) {
-    event.preventDefault();
+  function resetFields() {
+    setTimeScopeType("weekly");
+    setDayIndex(0);
+    setStartSlotId(slots[0]?.id ?? "");
+    setEndSlotId(slots[1]?.id ?? slots[0]?.id ?? "");
+    setSelectedWeekIds([]);
+    setStartDate("");
+    setEndDate("");
+    setDate("");
+  }
 
-    if (endSlot <= startSlot) return;
+  function handleAddClick() {
+    if ((slotIndexById[endSlotId] ?? 0) <= (slotIndexById[startSlotId] ?? 0)) {
+      return;
+    }
 
-    const payload = createUnavailability({
-      type,
-      dayIndex: type === "weekly" || type === "specific-weeks" ? dayIndex : null,
-      startSlot,
-      endSlot,
-      weekIds: type === "specific-weeks" ? selectedWeekIds : [],
-      startDate: type === "date-range" ? startDate : "",
-      endDate: type === "date-range" ? endDate : "",
-      date: type === "specific-date-time" ? date : "",
+    onAddUnavailability({
+      timeScopeType,
+      dayIndex:
+        timeScopeType === "weekly" || timeScopeType === "specific-weeks"
+          ? dayIndex
+          : null,
+      startSlotId,
+      endSlotId,
+      weekIds: timeScopeType === "specific-weeks" ? selectedWeekIds : [],
+      startDate: timeScopeType === "date-range" ? startDate : null,
+      endDate: timeScopeType === "date-range" ? endDate : null,
+      date: timeScopeType === "specific-date-time" ? date : null,
+      dayId: null,
+      slotId: null,
     });
 
-    onAddUnavailability(payload);
+    resetFields();
   }
 
   return (
-    <form className="unavailability-form" onSubmit={handleSubmit}>
+    <div className="unavailability-form">
       <div className="details-label">Ajouter une indisponibilité</div>
 
       <label className="form-field">
         <span>Type</span>
-        <select className="form-control" value={type} onChange={(e) => setType(e.target.value)}>
+        <select
+          className="form-control"
+          value={timeScopeType}
+          onChange={(e) => setTimeScopeType(e.target.value)}
+        >
           {TYPE_OPTIONS.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
@@ -64,7 +87,7 @@ export default function TeacherUnavailabilityEditor({
         </select>
       </label>
 
-      {(type === "weekly" || type === "specific-weeks") && (
+      {(timeScopeType === "weekly" || timeScopeType === "specific-weeks") && (
         <label className="form-field">
           <span>Jour</span>
           <select
@@ -85,12 +108,13 @@ export default function TeacherUnavailabilityEditor({
         <label className="form-field">
           <span>Début</span>
           <select
-            value={startSlot}
-            onChange={(e) => setStartSlot(Number(e.target.value))}
+            className="form-control"
+            value={startSlotId}
+            onChange={(e) => setStartSlotId(e.target.value)}
           >
-            {slots.map((slot, index) => (
-              <option key={slot.id} value={index}>
-                {slot.start}
+            {slots.map((slot) => (
+              <option key={slot.id} value={slot.id}>
+                {slot.start ?? slot.startTime}
               </option>
             ))}
           </select>
@@ -99,19 +123,20 @@ export default function TeacherUnavailabilityEditor({
         <label className="form-field">
           <span>Fin</span>
           <select
-            value={endSlot}
-            onChange={(e) => setEndSlot(Number(e.target.value))}
+            className="form-control"
+            value={endSlotId}
+            onChange={(e) => setEndSlotId(e.target.value)}
           >
-            {slots.map((slot, index) => (
-              <option key={slot.id} value={index + 1}>
-                {slot.end}
+            {slots.slice(1).map((slot) => (
+              <option key={slot.id} value={slot.id}>
+                {slot.end ?? slot.endTime}
               </option>
             ))}
           </select>
         </label>
       </div>
 
-      {type === "specific-weeks" && (
+      {timeScopeType === "specific-weeks" && (
         <div className="form-field">
           <span>Semaines</span>
           <div className="week-pills">
@@ -133,11 +158,12 @@ export default function TeacherUnavailabilityEditor({
         </div>
       )}
 
-      {type === "date-range" && (
+      {timeScopeType === "date-range" && (
         <div className="form-row">
           <label className="form-field">
             <span>Date début</span>
             <input
+              className="form-control"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -147,6 +173,7 @@ export default function TeacherUnavailabilityEditor({
           <label className="form-field">
             <span>Date fin</span>
             <input
+              className="form-control"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
@@ -155,10 +182,11 @@ export default function TeacherUnavailabilityEditor({
         </div>
       )}
 
-      {type === "specific-date-time" && (
+      {timeScopeType === "specific-date-time" && (
         <label className="form-field">
           <span>Date</span>
           <input
+            className="form-control"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
@@ -167,10 +195,14 @@ export default function TeacherUnavailabilityEditor({
       )}
 
       <div className="modal-actions">
-        <button type="submit" className="primary-button">
-          Ajouter l’indisponibilité
+        <button
+          type="button"
+          className="primary-button"
+          onClick={handleAddClick}
+        >
+          Ajouter une indisponibilité
         </button>
       </div>
-    </form>
+    </div>
   );
 }

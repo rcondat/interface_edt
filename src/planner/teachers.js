@@ -1,14 +1,19 @@
+function byId(list) {
+  return Object.fromEntries(list.map((item) => [item.id, item]));
+}
+
 export function getTeacherById(teachers, teacherId) {
   return teachers.find((teacher) => teacher.id === teacherId) ?? null;
 }
 
 export function getTeacherMap(teachers) {
-  return Object.fromEntries(teachers.map((teacher) => [teacher.id, teacher]));
+  return byId(teachers);
 }
 
 export function getCourseTeachers(courseType, teachers) {
   if (!courseType?.teacherIds?.length) return [];
   const teacherMap = getTeacherMap(teachers);
+
   return courseType.teacherIds
     .map((teacherId) => teacherMap[teacherId])
     .filter(Boolean);
@@ -19,61 +24,142 @@ export function getBlockAssignedTeacher(block, teachers) {
   return getTeacherById(teachers, block.assignedTeacherId);
 }
 
-function rangesOverlap(startA, endA, startB, endB) {
-  return startA < endB && startB < endA;
+function getWeekById(db, weekId) {
+  return db.weeks.find((week) => week.id === weekId) ?? null;
 }
 
-function isDateInRange(date, startDate, endDate) {
-  return date >= startDate && date <= endDate;
+function getDayById(db, dayId) {
+  return db.days.find((day) => day.id === dayId) ?? null;
+}
+
+function getSlotIndexMap(db) {
+  return Object.fromEntries(db.slots.map((slot) => [slot.id, slot.index]));
+}
+
+function getWeekForDay(db, dayId) {
+  const day = getDayById(db, dayId);
+  if (!day) return null;
+  return getWeekById(db, day.weekId);
+}
+
+function overlaps(startIndexA, endIndexA, startIndexB, endIndexB) {
+  return startIndexA < endIndexB && startIndexB < endIndexA;
+}
+
+function matchesConstraintTimeScope({
+  constraint,
+  day,
+  week,
+  slotIndexMap,
+  startSlotId,
+  durationSlots,
+}) {
+  const blockStart = slotIndexMap[startSlotId];
+  const blockEnd = blockStart + durationSlots;
+
+  const constraintStart =
+    constraint.startSlotId != null ? slotIndexMap[constraint.startSlotId] : null;
+
+  const constraintEnd =
+    constraint.endSlotId != null
+      ? slotIndexMap[constraint.endSlotId] + 1
+      : null;
+
+  const hasSlotRange = constraintStart != null && constraintEnd != null;
+
+  switch (constraint.timeScopeType) {
+    case "weekly":
+      return (
+        day.weekdayIndex === constraint.dayIndex &&
+        (!hasSlotRange || overlaps(blockStart, blockEnd, constraintStart, constraintEnd))
+      );
+
+    case "specific-weeks":
+      return (
+        constraint.weekIds?.includes(week.id) &&
+        day.weekdayIndex === constraint.dayIndex &&
+        (!hasSlotRange || overlaps(blockStart, blockEnd, constraintStart, constraintEnd))
+      );
+
+    case "date-range":
+      return (
+        day.date >= constraint.startDate &&
+        day.date <= constraint.endDate &&
+        (!hasSlotRange || overlaps(blockStart, blockEnd, constraintStart, constraintEnd))
+      );
+
+    case "specific-date-time":
+      return (
+        day.date === constraint.date &&
+        (!hasSlotRange || overlaps(blockStart, blockEnd, constraintStart, constraintEnd))
+      );
+
+    case "day":
+      return constraint.dayId === day.id;
+
+    case "slot":
+      return (
+        constraint.dayId === day.id &&
+        constraint.slotId === startSlotId
+      );
+
+    default:
+      return false;
+  }
+}
+
+export function getConstraintsForEntity(db, entityType, entityId) {
+  return db.constraints.filter(
+    (constraint) =>
+      constraint.entityType === entityType &&
+      constraint.entityId === entityId
+  );
+}
+
+export function getGlobalConstraints(db) {
+  return db.constraints.filter((constraint) => constraint.entityType === "global");
 }
 
 export function isTeacherUnavailable({
-  teacher,
-  week,
-  dayIndex,
-  startSlot,
+  db,
+  teacherId,
+  dayId,
+  startSlotId,
   durationSlots,
 }) {
-  if (!teacher) return false;
+  if (!teacherId) return false;
 
-  const blockStart = startSlot;
-  const blockEnd = startSlot + durationSlots;
+  const teacherConstraints = getConstraintsForEntity(db, "teacher", teacherId);
+  const day = getDayById(db, dayId);
+  const week = getWeekForDay(db, dayId);
+  const slotIndexMap = getSlotIndexMap(db);
 
-  return teacher.unavailabilities.some((rule) => {
-    const ruleStart = rule.startSlot;
-    const ruleEnd = rule.endSlot;
+  if (!day || !week || !(startSlotId in slotIndexMap)) {
+    return false;
+  }
 
-    switch (rule.type) {
-      case "weekly":
-        return (
-          rule.dayIndex === dayIndex &&
-          rangesOverlap(blockStart, blockEnd, ruleStart, ruleEnd)
-        );
+  return teacherConstraints.some((constraint) =>
+    matchesConstraintTimeScope({
+      constraint,
+      day,
+      week,
+      slotIndexMap,
+      startSlotId,
+      durationSlots,
+    })
+  );
+}
 
-      case "specific-weeks":
-        return (
-          rule.weekIds?.includes(week.id) &&
-          rule.dayIndex === dayIndex &&
-          rangesOverlap(blockStart, blockEnd, ruleStart, ruleEnd)
-        );
+export function isDayClosed(db, dayId) {
+  const day = getDayById(db, dayId);
+  if (!day) return false;
+  if (day.isHoliday || day.isClosed) return true;
 
-      case "date-range":
-        return (
-          isDateInRange(week.start, rule.startDate, rule.endDate) &&
-          rangesOverlap(blockStart, blockEnd, ruleStart, ruleEnd)
-        );
-
-      case "specific-date-time":
-        return (
-          week.start <= rule.date &&
-          week.end >= rule.date &&
-          rangesOverlap(blockStart, blockEnd, ruleStart, ruleEnd)
-        );
-
-      default:
-        return false;
-    }
-  });
+  return getGlobalConstraints(db).some(
+    (constraint) =>
+      constraint.timeScopeType === "day" &&
+      constraint.dayId === dayId
+  );
 }
 
 export function isTeacherAvailable(args) {
@@ -101,12 +187,11 @@ export function getEffectiveTeacherIdForBlockOrCourse(
 }
 
 export function getTeacherAvailabilityIssue({
-  teachers,
+  db,
   courseType,
   block,
-  week,
-  dayIndex,
-  startSlot,
+  dayId,
+  startSlotId,
   durationSlots,
   preselectedTeacherId = null,
 }) {
@@ -120,16 +205,11 @@ export function getTeacherAvailabilityIssue({
     return null;
   }
 
-  const teacher = getTeacherById(teachers, teacherId);
-  if (!teacher) {
-    return null;
-  }
-
   const unavailable = isTeacherUnavailable({
-    teacher,
-    week,
-    dayIndex,
-    startSlot,
+    db,
+    teacherId,
+    dayId,
+    startSlotId,
     durationSlots,
   });
 
@@ -144,22 +224,21 @@ export function getTeacherAvailabilityIssue({
 }
 
 export function getTeacherOptionsForBlock({
-  teachers,
+  db,
   courseType,
-  week,
-  dayIndex,
-  startSlot,
+  dayId,
+  startSlotId,
   durationSlots,
 }) {
-  const linkedTeachers = getCourseTeachers(courseType, teachers);
+  const linkedTeachers = getCourseTeachers(courseType, db.teachers);
 
   return linkedTeachers.map((teacher) => ({
     teacher,
     available: isTeacherAvailable({
-      teacher,
-      week,
-      dayIndex,
-      startSlot,
+      db,
+      teacherId: teacher.id,
+      dayId,
+      startSlotId,
       durationSlots,
     }),
   }));

@@ -32,10 +32,17 @@ export default function AddTeacherModal({
     const newTeacher = createTeacher({
       firstName,
       lastName,
-      unavailabilities,
     });
 
-    onSubmit(newTeacher);
+    onSubmit({
+      teacher: newTeacher,
+      constraints: unavailabilities.map((rule) => ({
+        ...rule,
+        entityType: "teacher",
+        entityId: newTeacher.id,
+      })),
+    });
+
     resetForm();
     onClose();
   }
@@ -91,7 +98,7 @@ export default function AddTeacherModal({
           />
 
           <TeacherUnavailabilityList
-            teacher={{ unavailabilities }}
+            constraints={unavailabilities}
             weeks={weeks}
             slots={slots}
             onRemoveUnavailability={(ruleId) =>

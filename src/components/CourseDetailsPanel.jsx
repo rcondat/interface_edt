@@ -4,8 +4,10 @@ import {
   getTeacherOptionsForBlock,
 } from "../planner/teachers";
 import { buildTeacherShortName } from "../planner/teacherManagement";
+import { getSlotsView, getWeekDays } from "../planner/dbSelectors";
 
 export default function CourseDetailsPanel({
+  db,
   selectedBlock,
   selectedPaletteCourseId,
   courseTypes,
@@ -14,7 +16,8 @@ export default function CourseDetailsPanel({
   activeWeek,
   onAssignTeacher,
 }) {
-  const selectedCourseTypeId = selectedBlock?.typeId ?? selectedPaletteCourseId ?? null;
+  const selectedCourseTypeId =
+    selectedBlock?.typeId ?? selectedPaletteCourseId ?? null;
 
   const courseType = selectedCourseTypeId
     ? courseTypes.find((course) => course.id === selectedCourseTypeId)
@@ -36,14 +39,19 @@ export default function CourseDetailsPanel({
     ? getBlockAssignedTeacher(block, teachers)
     : null;
 
+  const weekDays = getWeekDays(db, activeWeek.id);
+  const slots = getSlotsView(db);
+
+  const selectedDay = block ? weekDays[selectedBlock.dayIndex] : null;
+  const selectedSlot = block ? slots[selectedBlock.startSlot] : null;
+
   const teacherOptions =
-    block
+    block && selectedDay && selectedSlot
       ? getTeacherOptionsForBlock({
-          teachers,
+          db,
           courseType,
-          week: activeWeek,
-          dayIndex: selectedBlock.dayIndex,
-          startSlot: selectedBlock.startSlot,
+          dayId: selectedDay.id,
+          startSlotId: selectedSlot.id,
           durationSlots: block.durationSlots,
         })
       : [];
@@ -74,7 +82,7 @@ export default function CourseDetailsPanel({
             <div className="details-stack">
               <section className="details-section">
                 <div className="details-subtitle">
-                  Semaine {activeWeek.label} · créneau placé
+                  {activeWeek.label} · créneau placé
                 </div>
               </section>
 
@@ -94,7 +102,6 @@ export default function CourseDetailsPanel({
                       onAssignTeacher?.({
                         dayIndex: selectedBlock.dayIndex,
                         startSlot: selectedBlock.startSlot,
-                        durationSlots: block.durationSlots,
                         teacherId,
                       });
                     }}

@@ -13,10 +13,11 @@ export default function DroppableCell({
   previewDuration,
   ignoreBlock,
   slotCount,
-  teachers,
+  db,
+  weekDays,
+  slots,
   courseType,
   draggedBlock,
-  activeWeek,
   isDragging,
   preselectedTeacherId,
 }) {
@@ -33,13 +34,14 @@ export default function DroppableCell({
 
   if (isDragging) {
     const constraintState = getCellConstraintState({
+      db,
       activeGrid,
       dayIndex,
       slotIndex,
-      teachers,
+      weekDays,
+      slots,
       courseType,
       draggedBlock,
-      activeWeek,
       preselectedTeacherId,
     });
 
@@ -48,6 +50,10 @@ export default function DroppableCell({
       dayIndex === ignoreBlock.dayIndex &&
       slotIndex >= ignoreBlock.startSlot &&
       slotIndex < ignoreBlock.startSlot + ignoreBlock.durationSlots;
+
+    if (constraintState.dayClosed) {
+      className += " grid-cell-constraint-occupied";
+    }
 
     if (!isIgnoredSlot && constraintState.occupied) {
       className += " grid-cell-constraint-occupied";
@@ -59,6 +65,7 @@ export default function DroppableCell({
   }
 
   const previewState = getPreviewState({
+    db,
     activeGrid,
     previewAnchor,
     currentDayIndex: dayIndex,
@@ -66,10 +73,10 @@ export default function DroppableCell({
     previewDuration,
     ignoreBlock,
     slotCount,
-    teachers,
+    weekDays,
+    slots,
     courseType,
     draggedBlock,
-    activeWeek,
     preselectedTeacherId,
   });
 
@@ -86,7 +93,9 @@ export default function DroppableCell({
       className={className}
       onClick={() => onCellClick(dayIndex, slotIndex)}
       title={
-        selectedCourseTypeId ? `Placer sur ${day} - ${slot.label}` : `${day} - ${slot.label}`
+        selectedCourseTypeId
+          ? `Placer sur ${day} - ${slot.label}`
+          : `${day} - ${slot.label}`
       }
     />
   );
