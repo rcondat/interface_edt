@@ -1,6 +1,8 @@
 import usePlannerData from "./usePlannerData";
 import useTeacherManagement from "./useTeacherManagement";
 import usePlannerInteraction from "./usePlannerInteraction";
+import { useState } from "react";
+import buildDbFromDraft from "../planner/buildDbFromDraft";
 
 export default function usePlannerController() {
 
@@ -37,6 +39,21 @@ export default function usePlannerController() {
     activeEditorPanel: interaction.activeEditorPanel,
     setActiveEditorPanel: interaction.setActiveEditorPanel,
   });
+
+  const [isNewScheduleModalOpen, setIsNewScheduleModalOpen] = useState(false);
+
+  function handleCreateSchedule(draft) {
+    const nextDb = buildDbFromDraft(draft);
+    const firstWeekId = nextDb.semesters[0]?.weekIds?.[0] ?? "week-1";
+
+    setDb(nextDb);
+    interaction.resetForNewSchedule({
+      firstWeekId,
+      message: "Nouvel EDT créé.",
+    });
+    teacherManagement.resetTeacherManagement();
+    setIsNewScheduleModalOpen(false);
+  }
 
   return {
     sensors: interaction.sensors,
@@ -85,5 +102,9 @@ export default function usePlannerController() {
     handleDragCancel: interaction.handleDragCancel,
     handleSelectBlock: interaction.handleSelectBlock,
     handleRemoveCourse: interaction.handleRemoveCourse,
+
+    isNewScheduleModalOpen,
+    setIsNewScheduleModalOpen,
+    handleCreateSchedule,
   };
 }

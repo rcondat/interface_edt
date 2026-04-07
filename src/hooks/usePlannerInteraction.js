@@ -380,6 +380,20 @@ export default function usePlannerInteraction({
     setActiveEditorPanel("course");
   }
 
+  function resetForNewSchedule({ firstWeekId, message }) {
+    setRecentPlacement(null);
+    setPaletteDragSize(null);
+    setSelectedBlock(null);
+    setPendingTeacherAssignments({});
+    setSelectedCourseTypeId(null);
+    setActiveDragItem(null);
+    setActiveDropTarget(null);
+    setSelectedPaletteCourseId(null);
+    setActiveEditorPanel(null);
+    setActiveWeekId(firstWeekId);
+    setMessage(message ?? "Nouvel EDT créé.");
+  }
+
   return {
     sensors,
     recentPlacement,
@@ -406,5 +420,6 @@ export default function usePlannerInteraction({
     handleDragCancel,
     handleSelectBlock,
     handleRemoveCourse,
+    resetForNewSchedule,
   };
 }

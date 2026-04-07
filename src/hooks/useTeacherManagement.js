@@ -102,6 +102,11 @@ export default function useTeacherManagement({
     setMessage("Intervenant supprimé.");
   }
 
+  function resetTeacherManagement() {
+    setSelectedTeacherId(null);
+    setTeacherToDelete(null);
+    setIsAddTeacherModalOpen(false);
+  }
   return {
     selectedTeacherId,
     setSelectedTeacherId,
@@ -116,5 +121,6 @@ export default function useTeacherManagement({
     handleAddTeacherUnavailability,
     handleRemoveTeacherUnavailability,
     handleConfirmDeleteTeacher,
+    resetTeacherManagement,
   };
 }

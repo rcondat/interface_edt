@@ -7,6 +7,7 @@ import AddTeacherModal from "./components/AddTeacherModal";
 import ConfirmDialog from "./components/ConfirmDialog";
 import RightSidebar from "./components/RightSidebar";
 import usePlannerController from "./hooks/usePlannerController";
+import NewScheduleModal from "./components/NewScheduleModal";
 
 export default function App() {
   const planner = usePlannerController();
@@ -27,13 +28,23 @@ export default function App() {
               <p>V4 : déplacement des blocs déjà placés.</p>
             </div>
 
-            <button
-              type="button"
-              className="primary-button"
-              onClick={() => planner.setIsAddTeacherModalOpen(true)}
-            >
-              + Ajouter un intervenant
-            </button>
+            <div className="topbar-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => planner.setIsNewScheduleModalOpen(true)}
+              >
+                + Nouveau EDT
+              </button>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => planner.setIsAddTeacherModalOpen(true)}
+              >
+                + Ajouter un intervenant
+              </button>
+            </div>
           </div>
         </header>
 
@@ -122,6 +133,12 @@ export default function App() {
           teacherMap={planner.teacherMap}
         />
       </DragOverlay>
+
+      <NewScheduleModal
+        isOpen={planner.isNewScheduleModalOpen}
+        onClose={() => planner.setIsNewScheduleModalOpen(false)}
+        onSubmit={planner.handleCreateSchedule}
+      />
 
       <AddTeacherModal
         isOpen={planner.isAddTeacherModalOpen}
