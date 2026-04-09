@@ -10,6 +10,12 @@ import {
 } from "../planner/dbActions";
 import { validateDrop } from "../planner/preview";
 
+function getSessionById(db, sessionInstanceId) {
+  return (
+    db.sessionInstances.find((session) => session.id === sessionInstanceId) ?? null
+  );
+}
+
 export default function usePlannerInteraction({
   db,
   setDb,
@@ -32,12 +38,25 @@ export default function usePlannerInteraction({
   );
   const [selectedPaletteCourseId, setSelectedPaletteCourseId] = useState(null);
   const [activeEditorPanel, setActiveEditorPanel] = useState(null);
+  const [visiblePromotionIds, setVisiblePromotionIds] = useState([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
     })
   );
+
+  function toggleVisiblePromotion(promotionId) {
+    setVisiblePromotionIds((prev) =>
+      prev.includes(promotionId)
+        ? prev.filter((id) => id !== promotionId)
+        : [...prev, promotionId]
+    );
+  }
+
+  function showAllPromotions() {
+    setVisiblePromotionIds([]);
+  }
 
   function showCoursePanelFromPalette(courseTypeId) {
     setSelectedPaletteCourseId(courseTypeId);
@@ -122,19 +141,13 @@ export default function usePlannerInteraction({
     setSelectedCourseTypeId(null);
   }
 
-  function handleMoveCourse(
+  function handleMoveCourse({
+    sessionInstanceId,
     courseTypeId,
-    fromDayIndex,
-    fromStartSlot,
     toDayIndex,
-    toSlotIndex
-  ) {
-    const session = getSelectedSession(
-      db,
-      activeWeekId,
-      fromDayIndex,
-      fromStartSlot
-    );
+    toSlotIndex,
+  }) {
+    const session = getSessionById(db, sessionInstanceId);
     const courseType = courseTypes.find((course) => course.id === courseTypeId);
 
     if (!session || !courseType) {
@@ -161,6 +174,7 @@ export default function usePlannerInteraction({
       typeId: courseType.id,
       dayIndex: toDayIndex,
       startSlot: toSlotIndex,
+      sessionInstanceId: session.id,
     });
     setSelectedPaletteCourseId(null);
     setActiveEditorPanel("course");
@@ -170,9 +184,11 @@ export default function usePlannerInteraction({
     );
   }
 
-  function handleRemoveCourse({ dayIndex, startSlot, typeId }) {
+  function handleRemoveCourse({ dayIndex, startSlot, typeId, sessionInstanceId }) {
     const courseType = courseTypes.find((course) => course.id === typeId);
-    const session = getSelectedSession(db, activeWeekId, dayIndex, startSlot);
+    const session = sessionInstanceId
+      ? getSessionById(db, sessionInstanceId)
+      : getSelectedSession(db, activeWeekId, dayIndex, startSlot);
 
     if (!courseType || !session) {
       setMessage("Impossible de supprimer ce créneau.");
@@ -223,6 +239,7 @@ export default function usePlannerInteraction({
 
     setActiveDragItem({
       source: data.source,
+      sessionInstanceId: data.sessionInstanceId ?? null,
       typeId: data.typeId,
       fromDayIndex: data.fromDayIndex,
       fromStartSlot: data.fromStartSlot,
@@ -282,6 +299,7 @@ export default function usePlannerInteraction({
         dayIndex: fromDayIndex,
         startSlot: fromStartSlot,
         typeId,
+        sessionInstanceId: activeDragItem?.sessionInstanceId ?? null,
       });
       return;
     }
@@ -301,14 +319,25 @@ export default function usePlannerInteraction({
             dayIndex: fromDayIndex,
             startSlot: fromStartSlot,
             durationSlots: courseType.durationSlots,
+            sessionInstanceId: activeDragItem?.sessionInstanceId ?? null,
           }
         : null;
 
     const draggedBlock =
-      source === "grid" ? activeGrid?.[fromDayIndex]?.[fromStartSlot] : null;
+      source === "grid"
+        ? (activeGrid?.[fromDayIndex]?.[fromStartSlot] ?? []).find(
+            (entry) =>
+              entry.segment === 0 &&
+              entry.sessionInstanceId === activeDragItem?.sessionInstanceId
+          ) ?? null
+        : null;
 
     const preselectedTeacherId =
       source === "palette" ? pendingTeacherAssignments[typeId] ?? null : null;
+
+    const courseTypesById = Object.fromEntries(
+      courseTypes.map((course) => [course.id, course])
+    );
 
     const validation = validateDrop({
       db,
@@ -323,6 +352,7 @@ export default function usePlannerInteraction({
       courseType,
       draggedBlock,
       preselectedTeacherId,
+      courseTypesById,
     });
 
     if (!validation.ok) {
@@ -335,6 +365,9 @@ export default function usePlannerInteraction({
           break;
         case "teacher-unavailable":
           setMessage("Placement impossible : intervenant indisponible.");
+          break;
+        case "promotion-unavailable":
+          setMessage("Placement impossible : promotion indisponible.");
           break;
         case "day-closed":
           setMessage("Placement impossible : journée fermée.");
@@ -358,13 +391,12 @@ export default function usePlannerInteraction({
         return;
       }
 
-      handleMoveCourse(
-        typeId,
-        fromDayIndex,
-        fromStartSlot,
-        dayIndex,
-        slotIndex
-      );
+      handleMoveCourse({
+        sessionInstanceId: activeDragItem?.sessionInstanceId ?? null,
+        courseTypeId: typeId,
+        toDayIndex: dayIndex,
+        toSlotIndex: slotIndex,
+      });
     }
   }
 
@@ -392,6 +424,7 @@ export default function usePlannerInteraction({
     setActiveEditorPanel(null);
     setActiveWeekId(firstWeekId);
     setMessage(message ?? "Nouvel EDT créé.");
+    setVisiblePromotionIds([]);
   }
 
   return {
@@ -421,5 +454,9 @@ export default function usePlannerInteraction({
     handleSelectBlock,
     handleRemoveCourse,
     resetForNewSchedule,
+    visiblePromotionIds,
+    setVisiblePromotionIds,
+    toggleVisiblePromotion,
+    showAllPromotions,
   };
 }

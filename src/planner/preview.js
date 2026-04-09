@@ -1,4 +1,58 @@
-import { getTeacherAvailabilityIssue, isDayClosed } from "./teachers";
+import {
+  getPromotionAvailabilityIssue,
+  getTeacherAvailabilityIssue,
+  isDayClosed,
+} from "./teachers";
+
+function hasPromotionConflict(courseType, existingCourseType) {
+  const currentPromotionIds = courseType?.promotionIds ?? [];
+  const existingPromotionIds = existingCourseType?.promotionIds ?? [];
+
+  if (!currentPromotionIds.length || !existingPromotionIds.length) {
+    return true;
+  }
+
+  return currentPromotionIds.some((promotionId) =>
+    existingPromotionIds.includes(promotionId)
+  );
+}
+
+function isIgnoredEntry({
+  entry,
+  ignoreBlock,
+  dayIndex,
+  draggedBlock,
+}) {
+  if (!ignoreBlock) return false;
+  if (dayIndex !== ignoreBlock.dayIndex) return false;
+
+  return entry.sessionInstanceId === draggedBlock?.sessionInstanceId;
+}
+
+function findConflictingEntry({
+  cellEntries,
+  dayIndex,
+  ignoreBlock,
+  draggedBlock,
+  courseType,
+  courseTypesById,
+}) {
+  return cellEntries.find((entry) => {
+    if (
+      isIgnoredEntry({
+        entry,
+        ignoreBlock,
+        dayIndex,
+        draggedBlock,
+      })
+    ) {
+      return false;
+    }
+
+    const entryCourseType = courseTypesById?.[entry.typeId];
+    return hasPromotionConflict(courseType, entryCourseType);
+  });
+}
 
 export function getIgnoreBlock(activeDragItem, draggedCourse) {
   if (activeDragItem?.source !== "grid" || !draggedCourse) {
@@ -22,8 +76,23 @@ export function getCellConstraintState({
   courseType,
   draggedBlock,
   preselectedTeacherId,
+  courseTypesById,
+  ignoreBlock,
 }) {
-  const occupied = Boolean(activeGrid?.[dayIndex]?.[slotIndex]);
+  const cellEntries = activeGrid?.[dayIndex]?.[slotIndex] ?? [];
+
+  const conflictingEntry = courseType
+    ? findConflictingEntry({
+        cellEntries,
+        dayIndex,
+        ignoreBlock,
+        draggedBlock,
+        courseType,
+        courseTypesById,
+      })
+    : null;
+
+  const occupied = Boolean(conflictingEntry);
 
   const day = weekDays[dayIndex];
   const slot = slots[slotIndex];
@@ -32,11 +101,23 @@ export function getCellConstraintState({
     return {
       occupied,
       teacherUnavailable: false,
+      promotionUnavailable: false,
       dayClosed: false,
     };
   }
 
   const dayClosed = isDayClosed(db, day.id);
+
+  const promotionIssue =
+    courseType && !dayClosed
+      ? getPromotionAvailabilityIssue({
+          db,
+          courseType,
+          dayId: day.id,
+          startSlotId: slot.id,
+          durationSlots: 1,
+        })
+      : null;
 
   const teacherIssue =
     courseType && !dayClosed
@@ -54,6 +135,7 @@ export function getCellConstraintState({
   return {
     occupied,
     teacherUnavailable: Boolean(teacherIssue),
+    promotionUnavailable: Boolean(promotionIssue),
     dayClosed,
   };
 }
@@ -72,6 +154,7 @@ export function getPreviewState({
   courseType,
   draggedBlock,
   preselectedTeacherId,
+  courseTypesById,
 }) {
   if (!previewAnchor || previewDuration <= 0) {
     return { isPreview: false, isValid: false, reason: null };
@@ -102,22 +185,38 @@ export function getPreviewState({
     return { isPreview: true, isValid: false, reason: "day-closed" };
   }
 
+  const promotionIssue = getPromotionAvailabilityIssue({
+    db,
+    courseType,
+    dayId: day.id,
+    startSlotId: slot.id,
+    durationSlots: previewDuration,
+  });
+
+  if (promotionIssue) {
+    return {
+      isPreview: true,
+      isValid: false,
+      reason: promotionIssue.reason,
+    };
+  }
+
   for (let i = 0; i < previewDuration; i += 1) {
     const inspectedSlot = anchorSlotIndex + i;
-    const cell = activeGrid[anchorDayIndex]?.[inspectedSlot];
+    const cellEntries = activeGrid[anchorDayIndex]?.[inspectedSlot] ?? [];
 
-    if (!cell) continue;
+    const conflictingEntry = findConflictingEntry({
+      cellEntries,
+      dayIndex: anchorDayIndex,
+      ignoreBlock,
+      draggedBlock,
+      courseType,
+      courseTypesById,
+    });
 
-    if (
-      ignoreBlock &&
-      anchorDayIndex === ignoreBlock.dayIndex &&
-      inspectedSlot >= ignoreBlock.startSlot &&
-      inspectedSlot < ignoreBlock.startSlot + ignoreBlock.durationSlots
-    ) {
-      continue;
+    if (conflictingEntry) {
+      return { isPreview: true, isValid: false, reason: "overlap" };
     }
-
-    return { isPreview: true, isValid: false, reason: "overlap" };
   }
 
   const teacherIssue = getTeacherAvailabilityIssue({
@@ -154,6 +253,7 @@ export function validateDrop({
   courseType,
   draggedBlock,
   preselectedTeacherId,
+  courseTypesById,
 }) {
   if (slotIndex + durationSlots > slotCount) {
     return { ok: false, reason: "out-of-day" };
@@ -170,22 +270,34 @@ export function validateDrop({
     return { ok: false, reason: "day-closed" };
   }
 
+  const promotionIssue = getPromotionAvailabilityIssue({
+    db,
+    courseType,
+    dayId: day.id,
+    startSlotId: slot.id,
+    durationSlots,
+  });
+
+  if (promotionIssue) {
+    return { ok: false, reason: "promotion-unavailable" };
+  }
+
   for (let i = 0; i < durationSlots; i += 1) {
     const inspectedSlot = slotIndex + i;
-    const cell = activeGrid[dayIndex]?.[inspectedSlot];
+    const cellEntries = activeGrid[dayIndex]?.[inspectedSlot] ?? [];
 
-    if (!cell) continue;
+    const conflictingEntry = findConflictingEntry({
+      cellEntries,
+      dayIndex,
+      ignoreBlock,
+      draggedBlock,
+      courseType,
+      courseTypesById,
+    });
 
-    if (
-      ignoreBlock &&
-      dayIndex === ignoreBlock.dayIndex &&
-      inspectedSlot >= ignoreBlock.startSlot &&
-      inspectedSlot < ignoreBlock.startSlot + ignoreBlock.durationSlots
-    ) {
-      continue;
+    if (conflictingEntry) {
+      return { ok: false, reason: "overlap" };
     }
-
-    return { ok: false, reason: "overlap" };
   }
 
   const teacherIssue = getTeacherAvailabilityIssue({

@@ -702,6 +702,38 @@ h3 {
   background: rgba(15, 23, 42, 0.3);
 }
 
+.course-block {
+  z-index: 2;
+}
+
+.course-block-compact {
+  padding: 10px 8px 8px;
+  border-radius: 14px;
+}
+
+.course-block-compact .course-block-title {
+  font-size: 0.82rem;
+  line-height: 1.15;
+  padding-right: 24px;
+}
+
+.course-block-compact .course-block-meta {
+  margin-top: 4px;
+  font-size: 0.68rem;
+  line-height: 1.15;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  opacity: 0.95;
+}
+
+.course-block-compact .course-block-delete {
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  font-size: 0.82rem;
+}
+
 /* =========================================================
    11. Overlay de drag
    ========================================================= */
@@ -1206,4 +1238,11 @@ h3 {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #6b7280;
+}
+
+.promotion-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
 }

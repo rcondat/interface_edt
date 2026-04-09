@@ -70,6 +70,34 @@ export default function App() {
                 <div className="muted">
                   {planner.activeWeek.start} → {planner.activeWeek.end}
                 </div>
+                <div className="promotion-filter-bar">
+                  <button
+                    type="button"
+                    className={
+                      planner.visiblePromotionIds.length === 0
+                        ? "week-tab active"
+                        : "week-tab"
+                    }
+                    onClick={planner.showAllPromotions}
+                  >
+                    Toutes les promotions
+                  </button>
+
+                  {planner.promotions.map((promotion) => {
+                    const isActive = planner.visiblePromotionIds.includes(promotion.id);
+
+                    return (
+                      <button
+                        key={promotion.id}
+                        type="button"
+                        className={isActive ? "week-tab active" : "week-tab"}
+                        onClick={() => planner.toggleVisiblePromotion(promotion.id)}
+                      >
+                        {promotion.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <WeekTabs
                   weeks={planner.semester.weeks}
                   activeWeekId={planner.activeWeekId}
@@ -96,6 +124,7 @@ export default function App() {
                 recentPlacement={planner.recentPlacement}
                 pendingTeacherAssignments={planner.pendingTeacherAssignments}
                 selectedTeacherId={planner.selectedTeacherId}
+                visiblePromotionIds={planner.visiblePromotionIds}
               />
             </div>
 

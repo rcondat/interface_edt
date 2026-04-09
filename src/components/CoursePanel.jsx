@@ -44,7 +44,11 @@ function PaletteTile({
       <div className="tile-head">
         <div>
           <div className="tile-title">{course.label}</div>
-          
+          <div className="tile-subtitle">
+            {course.groupLabels?.length
+              ? `${course.promotionLabel} · ${course.groupLabels.join(", ")}`
+              : course.promotionLabel || "Promotion non définie"}
+          </div>
         </div>
         <span className="color-dot" style={{ backgroundColor: course.color }} />
       </div>
@@ -114,6 +118,7 @@ export default function CoursePanel({
                   course.label,
                   course.subject,
                   course.category,
+                  course.promotionLabel,
                 ]
                   .filter(Boolean)
                   .join(" ")

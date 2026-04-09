@@ -36,7 +36,7 @@ export function buildDemoDb() {
     id: "sem-1",
     label: "Semestre démo",
     weekIds: ["week-36", "week-37", "week-38"],
-    promotionIds: ["promo-iti3"],
+    promotionIds: ["promo-iti3","promo-iti4"],
     slotIds: slots.map((slot) => slot.id),
   };
 
@@ -101,14 +101,23 @@ export function buildDemoDb() {
       id: "promo-iti3",
       semesterId: "sem-1",
       label: "ITI 3",
-      groupIds: ["grp-td1", "grp-td2"],
+      groupIds: ["grp-iti3-td1", "grp-iti3-td2"],
       ecIds: ["ec-algo", "ec-bdd"],
+    },
+    {
+      id: "promo-iti4",
+      semesterId: "sem-1",
+      label: "ITI 4",
+      groupIds: ["grp-iti4-td1", "grp-iti4-td2"],
+      ecIds: ["ec-tim"],
     },
   ];
 
   const groups = [
-    { id: "grp-td1", promotionId: "promo-iti3", label: "TD1" },
-    { id: "grp-td2", promotionId: "promo-iti3", label: "TD2" },
+    { id: "grp-iti3-td1", promotionId: "promo-iti3", label: "TD1" },
+    { id: "grp-iti3-td2", promotionId: "promo-iti3", label: "TD2" },
+    { id: "grp-iti4-td1", promotionId: "promo-iti4", label: "TD1" },
+    { id: "grp-iti4-td2", promotionId: "promo-iti4", label: "TD2" },
   ];
 
   const ecs = [
@@ -127,6 +136,14 @@ export function buildDemoDb() {
       label: "Bases de données",
       color: "#9333ea",
       requirementIds: ["req-bdd-cm"],
+    },
+    {
+      id: "ec-tim",
+      promotionId: "promo-iti4",
+      code: "TIM",
+      label: "Traitement d'Images",
+      color: "#fa931d",
+      requirementIds: ["req-tim-cm", "req-tim-td"],
     },
   ];
 
@@ -149,7 +166,7 @@ export function buildDemoDb() {
       occurrencesRequired: 4,
       possibleTeacherIds: ["t-martin"],
       targetPromotionIds: [],
-      targetGroupIds: ["grp-td1", "grp-td2"],
+      targetGroupIds: ["grp-iti3-td1", "grp-iti3-td2"],
     },
     {
       id: "req-bdd-cm",
@@ -160,6 +177,26 @@ export function buildDemoDb() {
       possibleTeacherIds: ["t-bernard"],
       targetPromotionIds: ["promo-iti3"],
       targetGroupIds: [],
+    },
+    {
+      id: "req-tim-cm",
+      ecId: "ec-tim",
+      type: "CM",
+      durationSlots: 2,
+      occurrencesRequired: 2,
+      possibleTeacherIds: ["t-martin"],
+      targetPromotionIds: ["promo-iti4"],
+      targetGroupIds: [],
+    },
+    {
+      id: "req-tim-td",
+      ecId: "ec-tim",
+      type: "TD",
+      durationSlots: 1,
+      occurrencesRequired: 4,
+      possibleTeacherIds: ["t-martin"],
+      targetPromotionIds: [],
+      targetGroupIds: ["grp-iti4-td1", "grp-iti4-td2"],
     },
   ];
 
@@ -240,6 +277,60 @@ export function buildDemoDb() {
       id: "sess-bdd-cm-3",
       requirementId: "req-bdd-cm",
       occurrenceIndex: 3,
+      teacherId: null,
+      scheduledDayId: null,
+      startSlotId: null,
+      status: "draft",
+    },
+      {
+      id: "sess-tim-cm-1",
+      requirementId: "req-tim-cm",
+      occurrenceIndex: 1,
+      teacherId: null,
+      scheduledDayId: null,
+      startSlotId: null,
+      status: "draft",
+    },
+    {
+      id: "sess-tim-cm-2",
+      requirementId: "req-tim-cm",
+      occurrenceIndex: 2,
+      teacherId: null,
+      scheduledDayId: null,
+      startSlotId: null,
+      status: "draft",
+    },
+    {
+      id: "sess-tim-td-1",
+      requirementId: "req-tim-td",
+      occurrenceIndex: 1,
+      teacherId: null,
+      scheduledDayId: null,
+      startSlotId: null,
+      status: "draft",
+    },
+    {
+      id: "sess-tim-td-2",
+      requirementId: "req-tim-td",
+      occurrenceIndex: 2,
+      teacherId: null,
+      scheduledDayId: null,
+      startSlotId: null,
+      status: "draft",
+    },
+    {
+      id: "sess-tim-td-3",
+      requirementId: "req-tim-td",
+      occurrenceIndex: 3,
+      teacherId: null,
+      scheduledDayId: null,
+      startSlotId: null,
+      status: "draft",
+    },
+    {
+      id: "sess-tim-td-4",
+      requirementId: "req-tim-td",
+      occurrenceIndex: 4,
       teacherId: null,
       scheduledDayId: null,
       startSlotId: null,

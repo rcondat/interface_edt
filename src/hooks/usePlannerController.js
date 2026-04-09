@@ -18,6 +18,7 @@ export default function usePlannerController() {
     teacherMap,
     activeWeek,
     weekDayLabels,
+    promotions,
   } = usePlannerData();
 
   const interaction = usePlannerInteraction({
@@ -106,5 +107,10 @@ export default function usePlannerController() {
     isNewScheduleModalOpen,
     setIsNewScheduleModalOpen,
     handleCreateSchedule,
+
+    promotions,
+    visiblePromotionIds: interaction.visiblePromotionIds,
+    toggleVisiblePromotion: interaction.toggleVisiblePromotion,
+    showAllPromotions: interaction.showAllPromotions,
   };
 }

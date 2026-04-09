@@ -20,6 +20,7 @@ export default function DroppableCell({
   draggedBlock,
   isDragging,
   preselectedTeacherId,
+  courseTypesById
 }) {
   const { setNodeRef } = useDroppable({
     id: `cell-${dayIndex}-${slotIndex}`,
@@ -43,6 +44,8 @@ export default function DroppableCell({
       courseType,
       draggedBlock,
       preselectedTeacherId,
+      courseTypesById,
+      ignoreBlock,
     });
 
     const isIgnoredSlot =
@@ -59,7 +62,7 @@ export default function DroppableCell({
       className += " grid-cell-constraint-occupied";
     }
 
-    if (constraintState.teacherUnavailable) {
+    if (constraintState.teacherUnavailable || constraintState.promotionUnavailable) {
       className += " grid-cell-constraint-teacher";
     }
   }
@@ -78,6 +81,8 @@ export default function DroppableCell({
     courseType,
     draggedBlock,
     preselectedTeacherId,
+    courseTypesById,
+    ignoreBlock,
   });
 
   if (previewState.isPreview) {

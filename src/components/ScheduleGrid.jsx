@@ -1,6 +1,7 @@
 import { SLOT_HEIGHT } from "../planner/constants";
 import { getIgnoreBlock } from "../planner/preview";
 import {
+  assignBlockLanes,
   getActiveGrid,
   getCourseTypesById,
   getMergedBlocksForDay,
@@ -8,6 +9,15 @@ import {
 import DraggableBlock from "./grid/DraggableBlock";
 import DroppableCell from "./grid/DroppableCell";
 import { getWeekDays } from "../planner/dbSelectors";
+
+function isCourseVisibleForPromotions(course, visiblePromotionIds) {
+  if (!visiblePromotionIds?.length) return true;
+  if (!course?.promotionIds?.length) return true;
+
+  return course.promotionIds.some((promotionId) =>
+    visiblePromotionIds.includes(promotionId)
+  );
+}
 
 export default function ScheduleGrid({
   db,
@@ -26,10 +36,10 @@ export default function ScheduleGrid({
   recentPlacement,
   pendingTeacherAssignments,
   selectedTeacherId,
+  visiblePromotionIds,
 }) {
   const courseTypesById = getCourseTypesById(courseTypes);
   const activeGrid = getActiveGrid(assignments, activeWeekId);
-
   const weekDays = getWeekDays(db, activeWeekId);
 
   const draggedCourse =
@@ -39,7 +49,11 @@ export default function ScheduleGrid({
     activeDragItem?.source === "grid" &&
     typeof activeDragItem.fromDayIndex === "number" &&
     typeof activeDragItem.fromStartSlot === "number"
-      ? activeGrid?.[activeDragItem.fromDayIndex]?.[activeDragItem.fromStartSlot] ?? null
+      ? (activeGrid?.[activeDragItem.fromDayIndex]?.[activeDragItem.fromStartSlot] ?? []).find(
+          (entry) =>
+            entry.segment === 0 &&
+            entry.sessionInstanceId === activeDragItem.sessionInstanceId
+        ) ?? null
       : null;
 
   const previewDuration = draggedCourse?.durationSlots ?? 0;
@@ -78,8 +92,12 @@ export default function ScheduleGrid({
           </div>
 
           {days.map((day, dayIndex) => {
-            const daySlots = activeGrid[dayIndex] ?? Array(slots.length).fill(null);
-            const blocks = getMergedBlocksForDay(daySlots, courseTypesById);
+            const daySlots =
+              activeGrid[dayIndex] ?? Array.from({ length: slots.length }, () => []);
+
+            const blocks = assignBlockLanes(
+              getMergedBlocksForDay(daySlots, courseTypesById, visiblePromotionIds)
+            );
 
             return (
               <div
@@ -108,15 +126,21 @@ export default function ScheduleGrid({
                     draggedBlock={draggedBlock}
                     isDragging={isDragging}
                     preselectedTeacherId={preselectedTeacherId}
+                    courseTypesById={courseTypesById}
                   />
                 ))}
 
                 {blocks.map((block) => {
                   const course = courseTypesById[block.typeId];
+                  if (!course) return null;
+
+                  if (!isCourseVisibleForPromotions(course, visiblePromotionIds)) {
+                    return null;
+                  }
 
                   return (
                     <DraggableBlock
-                      key={`${dayIndex}-${block.typeId}-${block.startSlot}`}
+                      key={`${dayIndex}-${block.sessionInstanceId}`}
                       block={block}
                       dayIndex={dayIndex}
                       weekId={activeWeekId}
@@ -132,6 +156,8 @@ export default function ScheduleGrid({
                         recentPlacement.typeId === block.typeId
                       }
                       selectedTeacherId={selectedTeacherId}
+                      lane={block.lane ?? 0}
+                      laneCount={block.laneCount ?? 1}
                     />
                   );
                 })}

@@ -2,6 +2,7 @@ function byId(list) {
   return Object.fromEntries(list.map((item) => [item.id, item]));
 }
 
+
 export function getTeacherById(teachers, teacherId) {
   return teachers.find((teacher) => teacher.id === teacherId) ?? null;
 }
@@ -32,8 +33,67 @@ function getDayById(db, dayId) {
   return db.days.find((day) => day.id === dayId) ?? null;
 }
 
+function rangesOverlap(startA, durationA, startB, durationB) {
+  return startA < startB + durationB && startB < startA + durationA;
+}
+
 function getSlotIndexMap(db) {
-  return Object.fromEntries(db.slots.map((slot) => [slot.id, slot.index]));
+  return Object.fromEntries(
+    [...db.slots]
+      .sort((a, b) => a.index - b.index)
+      .map((slot, index) => [slot.id, index])
+  );
+}
+
+function getRequirementMap(db) {
+  return Object.fromEntries((db.requirements ?? []).map((req) => [req.id, req]));
+}
+
+function getTeacherScheduleConflict({
+  db,
+  teacherId,
+  dayId,
+  startSlotId,
+  durationSlots,
+  ignoredSessionRequirementId = null,
+  ignoredSessionStartSlot = null,
+}) {
+  if (!teacherId) return null;
+
+  const slotIndexMap = getSlotIndexMap(db);
+  const requirementMap = getRequirementMap(db);
+
+  const startIndex = slotIndexMap[startSlotId];
+  if (startIndex == null) return null;
+
+  return (
+    db.sessionInstances.find((session) => {
+      if (!session.scheduledDayId || !session.startSlotId) return false;
+      if (session.scheduledDayId !== dayId) return false;
+      if (session.teacherId !== teacherId) return false;
+
+      if (
+        ignoredSessionRequirementId &&
+        session.requirementId === ignoredSessionRequirementId &&
+        session.startSlotId === ignoredSessionStartSlot
+      ) {
+        return false;
+      }
+
+      const sessionStartIndex = slotIndexMap[session.startSlotId];
+      if (sessionStartIndex == null) return false;
+
+      const requirement = requirementMap[session.requirementId];
+      if (!requirement) return false;
+
+      return rangesOverlap(
+        startIndex,
+        durationSlots,
+        sessionStartIndex,
+        requirement.durationSlots
+      );
+    }) ?? null
+  );
 }
 
 function getWeekForDay(db, dayId) {
@@ -120,6 +180,82 @@ export function getGlobalConstraints(db) {
   return db.constraints.filter((constraint) => constraint.entityType === "global");
 }
 
+function getPromotionById(db, promotionId) {
+  return db.promotions.find((promotion) => promotion.id === promotionId) ?? null;
+}
+
+export function isPromotionUnavailable({
+  db,
+  promotionId,
+  dayId,
+  startSlotId,
+  durationSlots,
+}) {
+  if (!promotionId) return false;
+
+  const promotionConstraints = getConstraintsForEntity(db, "promotion", promotionId);
+  const day = getDayById(db, dayId);
+  const week = getWeekForDay(db, dayId);
+  const slotIndexMap = getSlotIndexMap(db);
+  const promotion = getPromotionById(db, promotionId);
+
+  if (!day || !week || !(startSlotId in slotIndexMap)) {
+    return false;
+  }
+
+  if (promotion?.startDate && day.date < promotion.startDate) {
+    return true;
+  }
+
+  if (promotion?.endDate && day.date > promotion.endDate) {
+    return true;
+  }
+
+  return promotionConstraints.some((constraint) =>
+    matchesConstraintTimeScope({
+      constraint,
+      day,
+      week,
+      slotIndexMap,
+      startSlotId,
+      durationSlots,
+    })
+  );
+}
+
+export function getPromotionAvailabilityIssue({
+  db,
+  courseType,
+  dayId,
+  startSlotId,
+  durationSlots,
+}) {
+  const promotionIds = courseType?.promotionIds ?? [];
+
+  if (!promotionIds.length) {
+    return null;
+  }
+
+  const blockedPromotionId = promotionIds.find((promotionId) =>
+    isPromotionUnavailable({
+      db,
+      promotionId,
+      dayId,
+      startSlotId,
+      durationSlots,
+    })
+  );
+
+  if (!blockedPromotionId) {
+    return null;
+  }
+
+  return {
+    promotionId: blockedPromotionId,
+    reason: "promotion-unavailable",
+  };
+}
+
 export function isTeacherUnavailable({
   db,
   teacherId,
@@ -193,32 +329,56 @@ export function getTeacherAvailabilityIssue({
   dayId,
   startSlotId,
   durationSlots,
-  preselectedTeacherId = null,
+  preselectedTeacherId,
 }) {
-  const teacherId = getEffectiveTeacherIdForBlockOrCourse(
-    block,
-    courseType,
-    preselectedTeacherId
-  );
+  const candidateTeacherIds = preselectedTeacherId
+    ? [preselectedTeacherId]
+    : courseType?.teacherIds?.length === 1
+      ? [courseType.teacherIds[0]]
+      : [];
 
-  if (!teacherId) {
+  if (!candidateTeacherIds.length) {
     return null;
   }
 
-  const unavailable = isTeacherUnavailable({
-    db,
-    teacherId,
-    dayId,
-    startSlotId,
-    durationSlots,
+  const ignoredSessionRequirementId = block?.typeId ?? null;
+  const ignoredSessionStartSlot =
+    typeof block?.startSlot === "number"
+      ? db.slots.find((slot) => slot.index === block.startSlot)?.id ?? null
+      : null;
+
+  const unavailableTeacherId = candidateTeacherIds.find((teacherId) => {
+    const declaredUnavailable = isTeacherUnavailable({
+      db,
+      teacherId,
+      dayId,
+      startSlotId,
+      durationSlots,
+    });
+
+    if (declaredUnavailable) {
+      return true;
+    }
+
+    const scheduleConflict = getTeacherScheduleConflict({
+      db,
+      teacherId,
+      dayId,
+      startSlotId,
+      durationSlots,
+      ignoredSessionRequirementId,
+      ignoredSessionStartSlot,
+    });
+
+    return Boolean(scheduleConflict);
   });
 
-  if (!unavailable) {
+  if (!unavailableTeacherId) {
     return null;
   }
 
   return {
-    teacherId,
+    teacherId: unavailableTeacherId,
     reason: "teacher-unavailable",
   };
 }

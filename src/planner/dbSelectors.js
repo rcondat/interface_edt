@@ -50,11 +50,34 @@ export function getTeachers(db) {
   return db.teachers;
 }
 
+export function getPromotions(db) {
+  return [...(db.promotions ?? [])].sort((a, b) =>
+    String(a.label ?? "").localeCompare(String(b.label ?? ""), "fr")
+  );
+}
+
 export function getRequirementsView(db) {
   const ecMap = byId(db.ecs);
+  const promotionMap = byId(db.promotions ?? []);
+  const groupMap = byId(db.groups ?? []);
 
   return db.requirements.map((requirement) => {
     const ec = ecMap[requirement.ecId];
+
+    const directPromotionIds = requirement.targetPromotionIds ?? [];
+    const promotionIdsFromGroups = (requirement.targetGroupIds ?? [])
+      .map((groupId) => groupMap[groupId]?.promotionId)
+      .filter(Boolean);
+
+    const promotionIds = [...new Set([...directPromotionIds, ...promotionIdsFromGroups])];
+
+    const promotionLabels = promotionIds
+      .map((promotionId) => promotionMap[promotionId]?.label)
+      .filter(Boolean);
+
+    const groupLabels = (requirement.targetGroupIds ?? [])
+      .map((groupId) => groupMap[groupId]?.label)
+      .filter(Boolean);
 
     return {
       id: requirement.id,
@@ -65,6 +88,11 @@ export function getRequirementsView(db) {
       totalCount: requirement.occurrencesRequired,
       color: ec.color,
       teacherIds: requirement.possibleTeacherIds,
+      promotionIds,
+      promotionLabels,
+      promotionLabel: promotionLabels.join(", "),
+      groupIds: requirement.targetGroupIds ?? [],
+      groupLabels,
     };
   });
 }
@@ -138,7 +166,7 @@ export function buildAssignmentsView(db, weekId) {
 
   const weekGrid = {};
   days.forEach((_, dayIndex) => {
-    weekGrid[dayIndex] = Array(slots.length).fill(null);
+    weekGrid[dayIndex] = Array.from({ length: slots.length }, () => []);
   });
 
   db.sessionInstances.forEach((session) => {
@@ -151,16 +179,19 @@ export function buildAssignmentsView(db, weekId) {
     if (!requirement) return;
 
     for (let i = 0; i < requirement.durationSlots; i += 1) {
-      if (weekGrid[dayIndex][slotIndex + i]) continue;
+      const targetSlotIndex = slotIndex + i;
+      if (!weekGrid[dayIndex][targetSlotIndex]) {
+        weekGrid[dayIndex][targetSlotIndex] = [];
+      }
 
-      weekGrid[dayIndex][slotIndex + i] = {
+      weekGrid[dayIndex][targetSlotIndex].push({
         sessionInstanceId: session.id,
         typeId: requirement.id,
         segment: i,
         startSlot: slotIndex,
         durationSlots: requirement.durationSlots,
         assignedTeacherId: session.teacherId ?? null,
-      };
+      });
     }
   });
 
