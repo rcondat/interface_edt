@@ -8,10 +8,11 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import RightSidebar from "./components/RightSidebar";
 import usePlannerController from "./hooks/usePlannerController";
 import NewScheduleModal from "./components/NewScheduleModal";
+import { useState } from "react";
 
 export default function App() {
   const planner = usePlannerController();
-
+  const [isPromotionMenuOpen, setIsPromotionMenuOpen] = useState(false);
   return (
     <DndContext
       sensors={planner.sensors}
@@ -67,42 +68,64 @@ export default function App() {
             <div className="panel">
               <div className="panel-header">
                 <h2>{planner.activeWeek.label}</h2>
-                <div className="muted">
-                  {planner.activeWeek.start} → {planner.activeWeek.end}
-                </div>
-                <div className="promotion-filter-bar">
-                  <button
-                    type="button"
-                    className={
-                      planner.visiblePromotionIds.length === 0
-                        ? "week-tab active"
-                        : "week-tab"
-                    }
-                    onClick={planner.showAllPromotions}
-                  >
-                    Toutes les promotions
-                  </button>
+                <div className="grid-filters-bar">
+                  <label className="grid-filter-field">
+                    <span>Semaine</span>
+                    <select
+                      value={planner.activeWeekId}
+                      onChange={(event) => planner.showWeekPanel(event.target.value)}
+                    >
+                      {planner.semester.weeks.map((week) => (
+                        <option key={week.id} value={week.id}>
+                          {week.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                  {planner.promotions.map((promotion) => {
-                    const isActive = planner.visiblePromotionIds.includes(promotion.id);
+                  <div className="grid-filter-field">
+                    <span>Promotions</span>
 
-                    return (
-                      <button
-                        key={promotion.id}
-                        type="button"
-                        className={isActive ? "week-tab active" : "week-tab"}
-                        onClick={() => planner.toggleVisiblePromotion(promotion.id)}
-                      >
-                        {promotion.label}
-                      </button>
-                    );
-                  })}
+                    <button
+                      type="button"
+                      className="grid-filter-trigger"
+                      onClick={() => setIsPromotionMenuOpen((prev) => !prev)}
+                    >
+                      {planner.visiblePromotionIds.length === 0
+                        ? "Toutes les promotions"
+                        : planner.promotions
+                            .filter((promotion) =>
+                              planner.visiblePromotionIds.includes(promotion.id)
+                            )
+                            .map((promotion) => promotion.label)
+                            .join(", ")}
+                    </button>
+
+                    {isPromotionMenuOpen && (
+                      <div className="grid-filter-dropdown">
+                        <label className="grid-filter-option">
+                          <input
+                            type="checkbox"
+                            checked={planner.visiblePromotionIds.length === 0}
+                            onChange={() => planner.showAllPromotions()}
+                          />
+                          <span>Toutes les promotions</span>
+                        </label>
+
+                        {planner.promotions.map((promotion) => (
+                          <label key={promotion.id} className="grid-filter-option">
+                            <input
+                              type="checkbox"
+                              checked={planner.visiblePromotionIds.includes(promotion.id)}
+                              onChange={() => planner.toggleVisiblePromotion(promotion.id)}
+                            />
+                            <span>{promotion.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <WeekTabs
-                  weeks={planner.semester.weeks}
-                  activeWeekId={planner.activeWeekId}
-                  onChange={planner.showWeekPanel}
-                />
               </div>
 
               <ScheduleGrid
@@ -113,6 +136,7 @@ export default function App() {
                 activeWeekId={planner.activeWeekId}
                 activeWeek={planner.activeWeek}
                 courseTypes={planner.courseTypes}
+                paletteItems={planner.paletteItems}
                 teachers={planner.teachers}
                 selectedCourseTypeId={planner.selectedCourseTypeId}
                 activeDragItem={planner.activeDragItem}
@@ -145,6 +169,7 @@ export default function App() {
             selectedBlock={planner.selectedBlock}
             selectedPaletteCourseId={planner.selectedPaletteCourseId}
             courseTypes={planner.courseTypes}
+            paletteItems={planner.paletteItems}
             assignments={planner.assignments}
             activeWeek={planner.activeWeek}
             handleAddTeacherUnavailability={planner.handleAddTeacherUnavailability}
@@ -159,6 +184,7 @@ export default function App() {
         <DragPreview
           dragItem={planner.activeDragItem}
           courseTypes={planner.courseTypes}
+          paletteItems={planner.paletteItems}
           teacherMap={planner.teacherMap}
         />
       </DragOverlay>

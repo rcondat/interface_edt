@@ -26,6 +26,7 @@ export default function ScheduleGrid({
   assignments,
   activeWeekId,
   courseTypes,
+  paletteItems,
   selectedCourseTypeId,
   activeDragItem,
   activeDropTarget,
@@ -43,7 +44,11 @@ export default function ScheduleGrid({
   const weekDays = getWeekDays(db, activeWeekId);
 
   const draggedCourse =
-    activeDragItem?.typeId ? courseTypesById[activeDragItem.typeId] : null;
+    activeDragItem?.typeId
+      ? activeDragItem.source === "palette"
+        ? paletteItems?.find((course) => course.id === activeDragItem.typeId) ?? null
+        : courseTypesById[activeDragItem.typeId]
+      : null;
 
   const draggedBlock =
     activeDragItem?.source === "grid" &&

@@ -44,72 +44,6 @@ function buildInitialDraft() {
   };
 }
 
-function addDays(dateString, daysToAdd) {
-  const date = new Date(`${dateString}T00:00:00`);
-  date.setDate(date.getDate() + daysToAdd);
-  return date.toISOString().slice(0, 10);
-}
-
-function getJsDay(dateString) {
-  return new Date(`${dateString}T00:00:00`).getDay();
-}
-
-function toMonday(dateString) {
-  const jsDay = getJsDay(dateString);
-  const offset = jsDay === 0 ? -6 : 1 - jsDay;
-  return addDays(dateString, offset);
-}
-
-function toDisplayedFriday(dateString) {
-  const jsDay = getJsDay(dateString);
-
-  if (jsDay === 6) return addDays(dateString, -1);
-  if (jsDay === 0) return addDays(dateString, -2);
-
-  return addDays(dateString, 5 - jsDay);
-}
-
-function computeDisplayedWeekCount(startDate, endDate) {
-  if (!startDate || !endDate) return 1;
-
-  const displayedStart = toMonday(startDate);
-  const displayedEnd = toDisplayedFriday(endDate);
-
-  const start = new Date(`${displayedStart}T00:00:00`);
-  const end = new Date(`${displayedEnd}T00:00:00`);
-
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    return 1;
-  }
-
-  const diffMs = end.getTime() - start.getTime();
-  if (diffMs < 0) return 1;
-
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.floor(diffDays / 7) + 1;
-}
-
-function getPromotionDateBounds(promotions) {
-  const validPromotions = promotions.filter(
-    (promotion) =>
-      String(promotion.label ?? "").trim() &&
-      promotion.startDate &&
-      promotion.endDate
-  );
-
-  if (validPromotions.length === 0) {
-    return {
-      startDate: "2026-09-07",
-      endDate: "2026-11-27",
-    };
-  }
-
-  const startDate = validPromotions.map((promotion) => promotion.startDate).sort()[0];
-  const endDate = validPromotions.map((promotion) => promotion.endDate).sort().at(-1);
-
-  return { startDate, endDate };
-}
-
 function formatClosureSummary(closure, promotionOptions) {
   const scopeLabel =
     closure.scope === "promotion"
@@ -375,20 +309,6 @@ export default function NewScheduleModal({
 
   const promotionOptions = draft.promotions.filter((promotion) =>
     String(promotion.label ?? "").trim()
-  );
-
-  const semesterBounds = useMemo(
-    () => getPromotionDateBounds(draft.promotions),
-    [draft.promotions]
-  );
-
-  const weekCount = useMemo(
-    () =>
-      computeDisplayedWeekCount(
-        semesterBounds.startDate,
-        semesterBounds.endDate
-      ),
-    [semesterBounds.startDate, semesterBounds.endDate]
   );
 
   const generatedSlotPreview = useMemo(

@@ -1,4 +1,14 @@
 import { SLOT_MINUTES } from "./constants";
+import {
+  deriveGroupLabelsFromGroupIds,
+  derivePromotionLabelsFromPromotionIds,
+  getRequirementAudienceMap,
+  getRequirementAudiencePromotionIds,
+  getRequirementAudienceSummary,
+  getRequirementForAudience,
+  getRequirementMap,
+  getSessionAudience,
+} from "./audience";
 
 export function durationLabel(durationSlots, slotMinutes = SLOT_MINUTES) {
   const minutes = durationSlots * slotMinutes;
@@ -15,27 +25,14 @@ export function getSemester(db, semesterId) {
   return db.semesters.find((item) => item.id === semesterId) ?? db.semesters[0];
 }
 
+export function getWeek(db, weekId) {
+  return db.weeks.find((item) => item.id === weekId) ?? db.weeks[0];
+}
+
 export function getWeekDays(db, weekId) {
   return db.days
     .filter((day) => day.weekId === weekId)
     .sort((a, b) => a.weekdayIndex - b.weekdayIndex);
-}
-
-export function getSlotsView(db) {
-  return db.slots
-    .slice()
-    .sort((a, b) => a.index - b.index)
-    .map((slot) => ({
-      id: slot.id,
-      label: slot.label,
-      start: slot.startTime,
-      end: slot.endTime,
-      index: slot.index,
-    }));
-}
-
-export function getWeek(db, weekId) {
-  return db.weeks.find((item) => item.id === weekId) ?? db.weeks[0];
 }
 
 export function getDaysForWeek(db, weekId) {
@@ -44,6 +41,16 @@ export function getDaysForWeek(db, weekId) {
 
 export function getSlots(db) {
   return [...db.slots].sort((a, b) => a.index - b.index);
+}
+
+export function getSlotsView(db) {
+  return getSlots(db).map((slot) => ({
+    id: slot.id,
+    label: slot.label,
+    start: slot.startTime,
+    end: slot.endTime,
+    index: slot.index,
+  }));
 }
 
 export function getTeachers(db) {
@@ -56,68 +63,130 @@ export function getPromotions(db) {
   );
 }
 
+function buildRequirementAudienceView(db, requirementAudience, ecMap, requirementMap) {
+  const requirement = requirementMap[requirementAudience.requirementId];
+  const ec = requirement ? ecMap[requirement.ecId] : null;
+  const promotionIds = getRequirementAudiencePromotionIds(db, requirementAudience);
+  const promotionLabels = derivePromotionLabelsFromPromotionIds(db, promotionIds);
+  const groupIds = requirementAudience.targetGroupIds ?? [];
+  const groupLabels = deriveGroupLabelsFromGroupIds(db, groupIds);
+
+  return {
+    id: requirementAudience.id,
+    requirementId: requirement?.id ?? null,
+    subject: ec?.label ?? "",
+    category: requirement?.type ?? "",
+    label: requirementAudience.label,
+    durationSlots: requirement?.durationSlots ?? 1,
+    totalCount: requirementAudience.occurrencesRequired ?? 0,
+    color: ec?.color ?? "#2563eb",
+    teacherIds: requirement?.possibleTeacherIds ?? [],
+    promotionIds,
+    promotionLabels,
+    promotionLabel: promotionLabels.join(", "),
+    groupIds,
+    groupLabels,
+    groupSetIds: requirementAudience.groupSetIds ?? [],
+  };
+}
+
+function buildLegacyRequirementView(db, requirement, ecMap) {
+  const ec = ecMap[requirement.ecId];
+  const audience = getRequirementAudienceSummary(db, requirement);
+  const promotionLabels = derivePromotionLabelsFromPromotionIds(db, audience.promotionIds);
+  const groupLabels = deriveGroupLabelsFromGroupIds(db, audience.targetGroupIds);
+
+  return {
+    id: requirement.id,
+    requirementId: requirement.id,
+    subject: ec.label,
+    category: requirement.type,
+    label: `${ec.code} - ${requirement.type}`,
+    durationSlots: requirement.durationSlots,
+    totalCount: requirement.occurrencesRequired,
+    color: ec.color,
+    teacherIds: requirement.possibleTeacherIds,
+    promotionIds: audience.promotionIds,
+    promotionLabels,
+    promotionLabel: promotionLabels.join(", "),
+    groupIds: audience.targetGroupIds,
+    groupLabels,
+    groupSetIds: audience.groupSetIds,
+  };
+}
+
 export function getRequirementsView(db) {
   const ecMap = byId(db.ecs);
-  const promotionMap = byId(db.promotions ?? []);
-  const groupMap = byId(db.groups ?? []);
+  const requirementMap = getRequirementMap(db);
 
-  return db.requirements.map((requirement) => {
-    const ec = ecMap[requirement.ecId];
+  if ((db.requirementAudiences ?? []).length > 0) {
+    return (db.requirementAudiences ?? []).map((requirementAudience) =>
+      buildRequirementAudienceView(db, requirementAudience, ecMap, requirementMap)
+    );
+  }
 
-    const directPromotionIds = requirement.targetPromotionIds ?? [];
-    const promotionIdsFromGroups = (requirement.targetGroupIds ?? [])
-      .map((groupId) => groupMap[groupId]?.promotionId)
-      .filter(Boolean);
-
-    const promotionIds = [...new Set([...directPromotionIds, ...promotionIdsFromGroups])];
-
-    const promotionLabels = promotionIds
-      .map((promotionId) => promotionMap[promotionId]?.label)
-      .filter(Boolean);
-
-    const groupLabels = (requirement.targetGroupIds ?? [])
-      .map((groupId) => groupMap[groupId]?.label)
-      .filter(Boolean);
-
-    return {
-      id: requirement.id,
-      subject: ec.label,
-      category: requirement.type,
-      label: `${ec.code} · ${requirement.type}`,
-      durationSlots: requirement.durationSlots,
-      totalCount: requirement.occurrencesRequired,
-      color: ec.color,
-      teacherIds: requirement.possibleTeacherIds,
-      promotionIds,
-      promotionLabels,
-      promotionLabel: promotionLabels.join(", "),
-      groupIds: requirement.targetGroupIds ?? [],
-      groupLabels,
-    };
-  });
+  return db.requirements.map((requirement) =>
+    buildLegacyRequirementView(db, requirement, ecMap)
+  );
 }
 
-export function getPlacedCountByRequirement(db) {
-  const result = {};
-  db.sessionInstances.forEach((session) => {
-    if (session.scheduledDayId && session.startSlotId) {
-      result[session.requirementId] = (result[session.requirementId] ?? 0) + 1;
+export function getPaletteItems(db) {
+  const courseTypes = getRequirementsView(db);
+  const countsByAudienceId = {};
+
+  (db.sessionInstances ?? []).forEach((session) => {
+    const audienceId = session.requirementAudienceId ?? session.requirementId;
+    if (!audienceId) {
+      return;
     }
+
+    if (!countsByAudienceId[audienceId]) {
+      countsByAudienceId[audienceId] = {
+        remaining: 0,
+        sessionInstanceIds: [],
+      };
+    }
+
+    if (session.scheduledDayId || session.startSlotId) {
+      return;
+    }
+
+    countsByAudienceId[audienceId].remaining += 1;
+    countsByAudienceId[audienceId].sessionInstanceIds.push(session.id);
   });
-  return result;
+
+  return courseTypes
+    .map((courseType) => {
+      const entry = countsByAudienceId[courseType.id] ?? {
+        remaining: 0,
+        sessionInstanceIds: [],
+      };
+
+      return {
+        ...courseType,
+        remaining: entry.remaining,
+        sessionInstanceIds: entry.sessionInstanceIds,
+      };
+    })
+    .filter((courseType) => courseType.remaining > 0);
 }
 
-export function groupPaletteFromDb(db) {
-  const placed = getPlacedCountByRequirement(db);
-  const requirements = getRequirementsView(db);
+export function getPaletteGroups(db) {
+  const items = getPaletteItems(db);
   const groups = {};
 
-  requirements.forEach((course) => {
-    const remaining = course.totalCount - (placed[course.id] ?? 0);
-    if (remaining <= 0) return;
+  items.forEach((course) => {
+    const groupKey = course.subject;
 
-    if (!groups[course.category]) groups[course.category] = [];
-    groups[course.category].push({ ...course, remaining });
+    if (!groups[groupKey]) {
+      groups[groupKey] = [];
+    }
+
+    groups[groupKey].push(course);
+  });
+
+  Object.values(groups).forEach((itemsBySubject) => {
+    itemsBySubject.sort((a, b) => a.label.localeCompare(b.label, "fr"));
   });
 
   return groups;
@@ -151,9 +220,7 @@ export function getSemesterView(db, semesterId) {
 
 export function getWeekDaysView(db, weekId) {
   return getDaysForWeek(db, weekId).map((day) =>
-    day.isHoliday || day.isClosed
-      ? `${day.weekdayLabel} · fermé`
-      : day.weekdayLabel
+    day.isHoliday || day.isClosed ? `${day.weekdayLabel} - ferme` : day.weekdayLabel
   );
 }
 
@@ -162,7 +229,8 @@ export function buildAssignmentsView(db, weekId) {
   const slots = getSlots(db);
   const dayIndexById = Object.fromEntries(days.map((day, index) => [day.id, index]));
   const slotIndexById = Object.fromEntries(slots.map((slot, index) => [slot.id, index]));
-  const requirementMap = byId(db.requirements);
+  const requirementAudienceMap = getRequirementAudienceMap(db);
+  const ecMap = byId(db.ecs);
 
   const weekGrid = {};
   days.forEach((_, dayIndex) => {
@@ -175,69 +243,41 @@ export function buildAssignmentsView(db, weekId) {
 
     const dayIndex = dayIndexById[session.scheduledDayId];
     const slotIndex = slotIndexById[session.startSlotId];
-    const requirement = requirementMap[session.requirementId];
-    if (!requirement) return;
+    const requirementAudience = requirementAudienceMap[session.requirementAudienceId];
+    const requirement = requirementAudience
+      ? getRequirementForAudience(db, requirementAudience)
+      : null;
+    const ec = requirement ? ecMap[requirement.ecId] : null;
 
-    for (let i = 0; i < requirement.durationSlots; i += 1) {
-      const targetSlotIndex = slotIndex + i;
-      if (!weekGrid[dayIndex][targetSlotIndex]) {
-        weekGrid[dayIndex][targetSlotIndex] = [];
-      }
+    if (!requirementAudience || !requirement || !ec) {
+      return;
+    }
+
+    const audience = getSessionAudience(db, session);
+    const groupLabels = deriveGroupLabelsFromGroupIds(db, audience.targetGroupIds);
+
+    for (let segment = 0; segment < requirement.durationSlots; segment += 1) {
+      const targetSlotIndex = slotIndex + segment;
 
       weekGrid[dayIndex][targetSlotIndex].push({
         sessionInstanceId: session.id,
-        typeId: requirement.id,
-        segment: i,
+        typeId: requirementAudience.id,
+        requirementId: requirement.id,
+        segment,
         startSlot: slotIndex,
         durationSlots: requirement.durationSlots,
         assignedTeacherId: session.teacherId ?? null,
+        groupIds: audience.targetGroupIds,
+        groupLabels,
+        promotionIds: audience.promotionIds,
+        groupSetIds: audience.groupSetIds,
+        label: requirementAudience.label,
+        subject: ec.label,
+        category: requirement.type,
+        color: ec.color,
       });
     }
   });
 
   return { [weekId]: weekGrid };
-}
-
-export function getSelectedSession(db, weekId, dayIndex, startSlot) {
-  const days = getDaysForWeek(db, weekId);
-  const slots = getSlots(db);
-  const day = days[dayIndex];
-  const slot = slots[startSlot];
-  if (!day || !slot) return null;
-
-  return (
-    db.sessionInstances.find(
-      (session) =>
-        session.scheduledDayId === day.id && session.startSlotId === slot.id
-    ) ?? null
-  );
-}
-
-export function getPaletteGroups(db) {
-  const placed = getPlacedCountByRequirement(db);
-  const requirements = getRequirementsView(db);
-  const groups = {};
-
-  requirements.forEach((course) => {
-    const remaining = course.totalCount - (placed[course.id] ?? 0);
-
-    if (remaining <= 0) return;
-
-    const groupKey = course.subject;
-
-    if (!groups[groupKey]) {
-      groups[groupKey] = [];
-    }
-
-    groups[groupKey].push({
-      ...course,
-      remaining,
-    });
-  });
-
-  Object.values(groups).forEach((items) => {
-    items.sort((a, b) => a.category.localeCompare(b.category, "fr"));
-  });
-
-  return groups;
 }

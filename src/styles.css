@@ -364,9 +364,43 @@ h3 {
   gap: 12px;
 }
 
+.tile-head-main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.tile-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.tile-kicker-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: #1d4ed8;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.tile-kicker-text {
+  font-size: 0.8rem;
+  color: var(--muted-soft);
+  font-weight: 700;
+}
+
 .tile-title {
   font-weight: 750;
-  font-size: 0.96rem;
+  font-size: 0.98rem;
+  line-height: 1.2;
 }
 
 .tile-subtitle {
@@ -375,11 +409,34 @@ h3 {
   color: var(--muted);
 }
 
+.tile-group-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tile-group-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 .tile-meta {
   margin-top: 12px;
   font-size: 0.82rem;
   align-items: center;
   color: #475569;
+}
+
+.tile-meta-item {
+  font-weight: 700;
 }
 
 .tile-overlay {
@@ -666,9 +723,9 @@ h3 {
 .course-block-meta {
   margin-top: 6px;
   font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  text-transform: none;
   opacity: 0.9;
 }
 
@@ -778,6 +835,26 @@ h3 {
   gap: 6px;
 }
 
+.details-hero {
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.details-card {
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 16px;
+  background: #fafcff;
+}
+
+.details-card-title {
+  font-size: 0.96rem;
+  font-weight: 750;
+  color: var(--text);
+}
+
 .details-label {
   font-size: 0.75rem;
   font-weight: 800;
@@ -794,6 +871,78 @@ h3 {
 .details-subtitle,
 .details-value {
   color: var(--muted);
+}
+
+.details-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.details-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.details-chip-primary {
+  background: var(--primary-soft);
+  border-color: rgba(37, 99, 235, 0.12);
+  color: #1d4ed8;
+}
+
+.details-inline-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.details-stat {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.details-note {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.details-warning-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.details-warning-item {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #9a3412;
+  font-size: 0.88rem;
 }
 
 .section-header {
@@ -833,6 +982,101 @@ h3 {
 
 .teacher-select option:disabled {
   color: #94a3b8;
+}
+
+.teacher-select-readonly {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+}
+
+.teacher-select-menu {
+  position: relative;
+}
+
+.teacher-select-trigger {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfe 100%);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.teacher-select-chevron {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.teacher-select-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 8px;
+}
+
+.teacher-select-option {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.14s ease,
+    background 0.14s ease,
+    opacity 0.14s ease;
+}
+
+.teacher-select-option:hover {
+  border-color: #dbeafe;
+  background: #f8fbff;
+}
+
+.teacher-select-option.is-selected {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: #eff6ff;
+}
+
+.teacher-select-option.is-disabled,
+.teacher-select-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  background: #f8fafc;
+}
+
+.teacher-select-option.is-disabled:hover,
+.teacher-select-option:disabled:hover {
+  border-color: transparent;
+  background: #f8fafc;
+}
+
+.teacher-option-name {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.teacher-option-meta {
+  font-size: 0.86rem;
+  color: var(--muted);
 }
 
 /* =========================================================
@@ -1245,4 +1489,64 @@ h3 {
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
+}
+
+
+.grid-filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.grid-filter-field {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+}
+
+.grid-filter-field > span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.grid-filter-field select,
+.grid-filter-trigger {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 12px;
+  font: inherit;
+  text-align: left;
+}
+
+.grid-filter-trigger {
+  cursor: pointer;
+}
+
+.grid-filter-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 20;
+  min-width: 100%;
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
+  display: grid;
+  gap: 8px;
+}
+
+.grid-filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
 }

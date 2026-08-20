@@ -20,11 +20,15 @@ function getBlockSubtitle({ dragItem, courseType, teacherMap }) {
 export default function DragPreview({
   dragItem,
   courseTypes,
+  paletteItems,
   teacherMap,
 }) {
   if (!dragItem) return null;
 
-  const courseType = courseTypes.find((course) => course.id === dragItem.typeId);
+  const courseType =
+    dragItem.source === "palette"
+      ? paletteItems?.find((course) => course.id === dragItem.typeId) ?? null
+      : courseTypes.find((course) => course.id === dragItem.typeId);
   if (!courseType) return null;
 
   const subtitle = getBlockSubtitle({

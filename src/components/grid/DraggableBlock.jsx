@@ -5,6 +5,7 @@ import { buildTeacherShortName } from "../../planner/teacherManagement";
 export default function DraggableBlock({
   block,
   dayIndex,
+  weekId,
   course,
   teacherMap,
   onRemoveBlock,
@@ -90,6 +91,8 @@ export default function DraggableBlock({
       onClick={() =>
         onSelectBlock?.({
           source: "grid",
+          weekId,
+          sessionInstanceId: block.sessionInstanceId,
           typeId: block.typeId,
           dayIndex,
           startSlot: block.startSlot,
@@ -111,6 +114,7 @@ export default function DraggableBlock({
             dayIndex,
             startSlot: block.startSlot,
             typeId: block.typeId,
+            sessionInstanceId: block.sessionInstanceId,
           });
         }}
         aria-label={`Supprimer ${course.label}`}

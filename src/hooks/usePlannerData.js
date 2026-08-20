@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { buildDemoDb } from "../data/demoDb";
 import {
   buildAssignmentsView,
+  getPaletteItems,
   getPromotions,
   getRequirementsView,
   getSemesterView,
@@ -18,6 +19,7 @@ export default function usePlannerData() {
 
   const semester = useMemo(() => getSemesterView(db, "sem-1"), [db]);
   const courseTypes = useMemo(() => getRequirementsView(db), [db]);
+  const paletteItems = useMemo(() => getPaletteItems(db), [db]);
   const teachers = useMemo(() => getTeachers(db), [db]);
   const promotions = useMemo(() => getPromotions(db), [db]);
   const assignments = useMemo(
@@ -48,6 +50,7 @@ export default function usePlannerData() {
     setActiveWeekId,
     semester,
     courseTypes,
+    paletteItems,
     teachers,
     promotions,
     assignments,

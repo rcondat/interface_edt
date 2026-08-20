@@ -82,7 +82,6 @@ export default function DroppableCell({
     draggedBlock,
     preselectedTeacherId,
     courseTypesById,
-    ignoreBlock,
   });
 
   if (previewState.isPreview) {

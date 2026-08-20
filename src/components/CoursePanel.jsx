@@ -42,20 +42,22 @@ function PaletteTile({
       {...attributes}
     >
       <div className="tile-head">
-        <div>
-          <div className="tile-title">{course.label}</div>
-          <div className="tile-subtitle">
-            {course.groupLabels?.length
-              ? `${course.promotionLabel} · ${course.groupLabels.join(", ")}`
-              : course.promotionLabel || "Promotion non définie"}
+        <div className="tile-head-main">
+          <div className="tile-kicker">
+            {course.promotionLabel ? (
+              <span className="tile-kicker-text">{course.promotionLabel}</span>
+            ) : null}
           </div>
+
+          <div className="tile-title">{course.label}</div>
         </div>
+
         <span className="color-dot" style={{ backgroundColor: course.color }} />
       </div>
 
       <div className="tile-meta">
-        <span>{durationLabel(course.durationSlots)}</span>
-        <span className="pill">x{course.remaining}</span>
+        <span className="tile-meta-item">{durationLabel(course.durationSlots)}</span>
+        <span className="pill">{course.remaining} a placer</span>
       </div>
     </button>
   );
@@ -119,6 +121,7 @@ export default function CoursePanel({
                   course.subject,
                   course.category,
                   course.promotionLabel,
+                  ...(course.groupLabels ?? []),
                 ]
                   .filter(Boolean)
                   .join(" ")
@@ -138,7 +141,7 @@ export default function CoursePanel({
   return (
     <section ref={setNodeRef} className="panel sidebar-panel">
       <div className="panel-header">
-        <h2>Créneaux à placer</h2>
+        <h2>Creneaux a placer</h2>
         <div className="badge">{semesterName}</div>
       </div>
 
@@ -149,7 +152,7 @@ export default function CoursePanel({
           <input
             type="text"
             className="sidebar-search-input"
-            placeholder="Rechercher un EC ou un créneau..."
+            placeholder="Rechercher un EC ou un creneau..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -159,8 +162,8 @@ export default function CoursePanel({
           {Object.keys(filteredGroups).length === 0 ? (
             <div className="empty-box">
               {normalizedQuery
-                ? "Aucun créneau ne correspond à la recherche."
-                : "Tous les créneaux configurés ont été placés."}
+                ? "Aucun creneau ne correspond a la recherche."
+                : "Tous les creneaux configures ont ete places."}
             </div>
           ) : (
             Object.entries(filteredGroups).map(([groupName, items]) => (

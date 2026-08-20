@@ -206,6 +206,26 @@ export default function buildDbFromDraft(draft) {
       ecIds: [],
     }));
 
+  const groupSets = promotions.map((promotion) => ({
+    id: `groupset-${promotion.id}-full`,
+    label: `${promotion.label} · Promo entière`,
+    promotionIds: [promotion.id],
+    groupIds: [`group-${promotion.id}-full`],
+  }));
+
+  const groups = promotions.map((promotion) => ({
+    id: `group-${promotion.id}-full`,
+    label: `${slugify(promotion.label).toUpperCase()}_CM`,
+    groupSetId: `groupset-${promotion.id}-full`,
+    promotionIds: [promotion.id],
+    parentGroupIds: [],
+    childGroupIds: [],
+  }));
+
+  promotions.forEach((promotion, index) => {
+    promotion.groupIds = [groups[index].id];
+  });
+
   const teachers = (draft.teachers ?? [])
     .filter(
       (teacher) =>
@@ -320,10 +340,12 @@ export default function buildDbFromDraft(draft) {
 
   const ecs = [];
   const requirements = [];
+  const requirementAudiences = [];
   const sessionInstances = [];
 
   let ecIndex = 1;
   let requirementIndex = 1;
+  let requirementAudienceIndex = 1;
 
   (draft.ecs ?? [])
     .filter((ec) => String(ec.label ?? "").trim() && ec.promotionId)
@@ -359,10 +381,23 @@ export default function buildDbFromDraft(draft) {
           ecId,
           type: courseTypeDef.type,
           durationSlots: courseTypeDef.durationSlots,
-          occurrencesRequired: courseTypeDef.occurrencesRequired,
           possibleTeacherIds: teacherIds,
-          targetPromotionIds: [ecDraft.promotionId],
+          targetPromotionIds: [],
           targetGroupIds: [],
+        });
+
+        const targetGroupId = `group-${ecDraft.promotionId}-full`;
+        const requirementAudienceId = `ra-${requirementAudienceIndex++}`;
+        const audienceLabel = `${String(ecDraft.label ?? "").trim()} - ${courseTypeDef.type}`;
+
+        requirementAudiences.push({
+          id: requirementAudienceId,
+          requirementId,
+          label: audienceLabel,
+          occurrencesRequired: courseTypeDef.occurrencesRequired,
+          targetPromotionIds: [ecDraft.promotionId],
+          targetGroupIds: [targetGroupId],
+          groupSetIds: [`groupset-${ecDraft.promotionId}-full`],
         });
 
         for (
@@ -373,10 +408,12 @@ export default function buildDbFromDraft(draft) {
           sessionInstances.push({
             id: `sess-${requirementId}-${occurrenceIndex}`,
             requirementId,
+            requirementAudienceId,
             occurrenceIndex,
             teacherId: null,
             scheduledDayId: null,
             startSlotId: null,
+            targetGroupIds: [targetGroupId],
             status: "draft",
           });
         }
@@ -414,9 +451,11 @@ export default function buildDbFromDraft(draft) {
     days,
     slots,
     promotions,
-    groups: [],
+    groupSets,
+    groups,
     ecs,
     requirements,
+    requirementAudiences,
     sessionInstances,
     teachers,
     constraints,

@@ -13,6 +13,7 @@ export default function usePlannerController() {
     setActiveWeekId,
     semester,
     courseTypes,
+    paletteItems,
     teachers,
     assignments,
     teacherMap,
@@ -28,6 +29,7 @@ export default function usePlannerController() {
     setActiveWeekId,
     semester,
     courseTypes,
+    paletteItems,
     assignments,
     weekDayLabels,
   });
@@ -61,6 +63,7 @@ export default function usePlannerController() {
     db,
     semester,
     courseTypes,
+    paletteItems,
     teachers,
     assignments,
     teacherMap,

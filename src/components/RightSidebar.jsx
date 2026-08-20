@@ -10,6 +10,7 @@ export default function RightSidebar({
   selectedBlock,
   selectedPaletteCourseId,
   courseTypes,
+  paletteItems,
   assignments,
   activeWeek,
   handleAddTeacherUnavailability,
@@ -47,6 +48,7 @@ export default function RightSidebar({
           selectedBlock={selectedBlock}
           selectedPaletteCourseId={selectedPaletteCourseId}
           courseTypes={courseTypes}
+          paletteItems={paletteItems}
           teachers={teachers}
           assignments={assignments}
           activeWeek={activeWeek}

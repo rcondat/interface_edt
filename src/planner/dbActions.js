@@ -1,41 +1,102 @@
 import { getDaysForWeek, getSlots } from "./dbSelectors";
+import { getRequirementForSession } from "./audience";
 
 function cloneDb(db) {
   return structuredClone(db);
 }
 
-function getRequirement(db, requirementId) {
-  return db.requirements.find((item) => item.id === requirementId) ?? null;
-}
-
-function getFirstUnplacedSession(db, requirementId) {
-  return (
-    db.sessionInstances.find(
-      (session) =>
-        session.requirementId === requirementId &&
-        !session.scheduledDayId &&
-        !session.startSlotId
-    ) ?? null
+function getSlotIndexMap(db) {
+  return Object.fromEntries(
+    [...db.slots]
+      .sort((a, b) => a.index - b.index)
+      .map((slot, index) => [slot.id, index])
   );
 }
 
-export function placeRequirementInstance({
+function getSessionById(db, sessionInstanceId) {
+  return db.sessionInstances.find((item) => item.id === sessionInstanceId) ?? null;
+}
+
+function rangesOverlap(startA, durationA, startB, durationB) {
+  return startA < startB + durationB && startB < startA + durationA;
+}
+
+function getEffectiveTeacherIdForSession(session, requirement) {
+  if (!session || !requirement) {
+    return null;
+  }
+
+  if (session.teacherId) {
+    return session.teacherId;
+  }
+
+  if (requirement.possibleTeacherIds?.length === 1) {
+    return requirement.possibleTeacherIds[0];
+  }
+
+  return null;
+}
+
+function hasTeacherAssignmentConflict({ db, sessionInstanceId, teacherId }) {
+  if (!teacherId) {
+    return false;
+  }
+
+  const session = getSessionById(db, sessionInstanceId);
+  const requirement = session ? getRequirementForSession(db, session) : null;
+
+  if (!session || !requirement || !session.scheduledDayId || !session.startSlotId) {
+    return false;
+  }
+
+  const slotIndexMap = getSlotIndexMap(db);
+  const sessionStartIndex = slotIndexMap[session.startSlotId];
+
+  if (sessionStartIndex == null) {
+    return false;
+  }
+
+  return db.sessionInstances.some((candidate) => {
+    if (candidate.id === session.id) return false;
+    if (!candidate.scheduledDayId || !candidate.startSlotId) return false;
+    if (candidate.scheduledDayId !== session.scheduledDayId) return false;
+
+    const candidateRequirement = getRequirementForSession(db, candidate);
+    const candidateStartIndex = slotIndexMap[candidate.startSlotId];
+
+    if (!candidateRequirement || candidateStartIndex == null) {
+      return false;
+    }
+
+    if (getEffectiveTeacherIdForSession(candidate, candidateRequirement) !== teacherId) {
+      return false;
+    }
+
+    return rangesOverlap(
+      sessionStartIndex,
+      requirement.durationSlots,
+      candidateStartIndex,
+      candidateRequirement.durationSlots
+    );
+  });
+}
+
+export function placeSessionInstance({
   db,
+  sessionInstanceId,
   weekId,
   dayIndex,
   slotIndex,
-  requirementId,
   teacherId = null,
 }) {
   const next = cloneDb(db);
-  const requirement = getRequirement(next, requirementId);
   const days = getDaysForWeek(next, weekId);
   const slots = getSlots(next);
   const day = days[dayIndex];
   const slot = slots[slotIndex];
-  const session = getFirstUnplacedSession(next, requirementId);
+  const session = getSessionById(next, sessionInstanceId);
 
-  if (!requirement || !day || !slot || !session) {
+  if (!session || !day || !slot) {
     return { ok: false, reason: "Impossible de placer cette occurrence." };
   }
 
@@ -44,7 +105,7 @@ export function placeRequirementInstance({
   session.teacherId = teacherId;
   session.status = "placed";
 
-  return { ok: true, db: next };
+  return { ok: true, db: next, sessionInstanceId: session.id };
 }
 
 export function moveSessionInstance({
@@ -59,10 +120,10 @@ export function moveSessionInstance({
   const slots = getSlots(next);
   const day = days[dayIndex];
   const slot = slots[slotIndex];
-  const session = next.sessionInstances.find((item) => item.id === sessionInstanceId);
+  const session = getSessionById(next, sessionInstanceId);
 
   if (!session || !day || !slot) {
-    return { ok: false, reason: "Déplacement impossible." };
+    return { ok: false, reason: "Deplacement impossible." };
   }
 
   session.scheduledDayId = day.id;
@@ -74,7 +135,7 @@ export function moveSessionInstance({
 
 export function unplaceSessionInstance({ db, sessionInstanceId }) {
   const next = cloneDb(db);
-  const session = next.sessionInstances.find((item) => item.id === sessionInstanceId);
+  const session = getSessionById(next, sessionInstanceId);
 
   if (!session) {
     return { ok: false, reason: "Suppression impossible." };
@@ -87,16 +148,19 @@ export function unplaceSessionInstance({ db, sessionInstanceId }) {
   return { ok: true, db: next };
 }
 
-export function assignTeacherToSession({
-  db,
-  sessionInstanceId,
-  teacherId,
-}) {
+export function assignTeacherToSession({ db, sessionInstanceId, teacherId }) {
   const next = cloneDb(db);
-  const session = next.sessionInstances.find((item) => item.id === sessionInstanceId);
+  const session = getSessionById(next, sessionInstanceId);
 
   if (!session) {
     return { ok: false, reason: "Affectation impossible." };
+  }
+
+  if (teacherId && hasTeacherAssignmentConflict({ db: next, sessionInstanceId, teacherId })) {
+    return {
+      ok: false,
+      reason: "Affectation impossible : intervenant deja occupe sur ce creneau.",
+    };
   }
 
   session.teacherId = teacherId;
