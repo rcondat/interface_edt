@@ -4,6 +4,7 @@ import { PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { getSlotsView, getWeekDays } from "../planner/dbSelectors";
 import {
   assignTeacherToSession,
+  assignRoomToSession,
   moveSessionInstance,
   placeSessionInstance,
   unplaceSessionInstance,
@@ -11,6 +12,7 @@ import {
 import { getRequirementForSession } from "../planner/audience";
 import { validateDrop } from "../planner/preview";
 import { getTeacherAssignmentIssue } from "../planner/teachers";
+import { getRoomAssignmentIssue } from "../planner/rooms";
 
 function getSessionById(db, sessionInstanceId) {
   return db.sessionInstances.find((session) => session.id === sessionInstanceId) ?? null;
@@ -90,6 +92,8 @@ function getValidationMessage(reason) {
       return "Placement impossible : depassement de la journee.";
     case "teacher-unavailable":
       return "Placement impossible : intervenant indisponible.";
+    case "room-unavailable":
+      return "Placement impossible : salle indisponible ou incompatible.";
     case "promotion-unavailable":
       return "Placement impossible : promotion indisponible.";
     case "day-closed":
@@ -202,6 +206,42 @@ export default function usePlannerInteraction({
         ? "Intervenant affecte au creneau."
         : "Affectation de l'intervenant supprimee."
     );
+  }
+
+  function handleAssignRoom({ sessionInstanceId, roomId }) {
+    const session = getSessionById(db, sessionInstanceId);
+
+    if (!session) {
+      setMessage("Affectation de salle impossible.");
+      return;
+    }
+
+    if (roomId) {
+      const roomIssue = getRoomAssignmentIssue({
+        db,
+        sessionInstanceId: session.id,
+        roomId,
+      });
+
+      if (roomIssue) {
+        setMessage("Affectation de salle impossible : salle incompatible ou indisponible.");
+        return;
+      }
+    }
+
+    const result = assignRoomToSession({
+      db,
+      sessionInstanceId: session.id,
+      roomId,
+    });
+
+    if (!result.ok) {
+      setMessage(result.reason ?? "Affectation de salle impossible.");
+      return;
+    }
+
+    setDb(result.db);
+    setMessage(roomId ? "Salle affectee au creneau." : "Affectation de la salle supprimee.");
   }
 
   function handlePaletteDragStart(typeId, width, height) {
@@ -543,6 +583,7 @@ export default function usePlannerInteraction({
     showCoursePanelFromPalette,
     showWeekPanel,
     handleAssignTeacher,
+    handleAssignRoom,
     handlePaletteDragStart,
     handleCellClick,
     handleDragStart,

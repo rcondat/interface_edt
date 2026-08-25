@@ -218,6 +218,7 @@ export default function buildDbFromDraft(draft) {
     label: `${slugify(promotion.label).toUpperCase()}_CM`,
     groupSetId: `groupset-${promotion.id}-full`,
     promotionIds: [promotion.id],
+    studentCount: Number(promotion.studentCount ?? 0) || null,
     parentGroupIds: [],
     childGroupIds: [],
   }));
@@ -238,9 +239,12 @@ export default function buildDbFromDraft(draft) {
       lastName: String(teacher.lastName ?? "").trim(),
     }));
 
+  const roomCategories = [];
+  const rooms = [];
+
   const weeks = [];
   const days = [];
-  const constraints = [];
+  const unavailabilities = [];
 
   const { startDate: realStartDate, endDate: realEndDate } =
     getPromotionDateBounds(draft.promotions ?? []);
@@ -292,8 +296,8 @@ export default function buildDbFromDraft(draft) {
       });
 
       if (isClosed) {
-        constraints.push({
-          id: `constraint-global-${dayId}`,
+        unavailabilities.push({
+          id: `unavailability-global-${dayId}`,
           entityType: "global",
           entityId: null,
           timeScopeType: "day",
@@ -320,8 +324,8 @@ export default function buildDbFromDraft(draft) {
         closure.endDate
     )
     .forEach((closure, index) => {
-      constraints.push({
-        id: closure.id || `constraint-promo-${index + 1}`,
+      unavailabilities.push({
+        id: closure.id || `unavailability-promo-${index + 1}`,
         entityType: "promotion",
         entityId: closure.promotionId,
         timeScopeType: "date-range",
@@ -382,6 +386,7 @@ export default function buildDbFromDraft(draft) {
           type: courseTypeDef.type,
           durationSlots: courseTypeDef.durationSlots,
           possibleTeacherIds: teacherIds,
+          allowedRoomCategoryIds: [],
           targetPromotionIds: [],
           targetGroupIds: [],
         });
@@ -411,6 +416,7 @@ export default function buildDbFromDraft(draft) {
             requirementAudienceId,
             occurrenceIndex,
             teacherId: null,
+            roomId: null,
             scheduledDayId: null,
             startSlotId: null,
             targetGroupIds: [targetGroupId],
@@ -453,11 +459,14 @@ export default function buildDbFromDraft(draft) {
     promotions,
     groupSets,
     groups,
+    roomCategories,
+    rooms,
     ecs,
     requirements,
     requirementAudiences,
     sessionInstances,
     teachers,
-    constraints,
+    unavailabilities,
+    constraints: unavailabilities,
   };
 }

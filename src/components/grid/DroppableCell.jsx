@@ -62,7 +62,11 @@ export default function DroppableCell({
       className += " grid-cell-constraint-occupied";
     }
 
-    if (constraintState.teacherUnavailable || constraintState.promotionUnavailable) {
+    if (
+      constraintState.teacherUnavailable ||
+      constraintState.roomUnavailable ||
+      constraintState.promotionUnavailable
+    ) {
       className += " grid-cell-constraint-teacher";
     }
   }

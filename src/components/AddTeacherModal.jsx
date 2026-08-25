@@ -36,7 +36,7 @@ export default function AddTeacherModal({
 
     onSubmit({
       teacher: newTeacher,
-      constraints: unavailabilities.map((rule) => ({
+      unavailabilities: unavailabilities.map((rule) => ({
         ...rule,
         entityType: "teacher",
         entityId: newTeacher.id,
@@ -98,7 +98,7 @@ export default function AddTeacherModal({
           />
 
           <TeacherUnavailabilityList
-            constraints={unavailabilities}
+            unavailabilities={unavailabilities}
             weeks={weeks}
             slots={slots}
             onRemoveUnavailability={(ruleId) =>

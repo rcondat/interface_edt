@@ -1,10 +1,10 @@
 import { useState } from "react";
 import {
-  addConstraintToDb,
   addTeacherToDb,
-  createConstraint,
+  addUnavailabilityToDb,
+  createUnavailability,
   deleteTeacherFromDb,
-  removeConstraintFromDb,
+  removeUnavailabilityFromDb,
   updateTeacherIdentityInDb,
 } from "../planner/teacherManagement";
 
@@ -42,41 +42,39 @@ export default function useTeacherManagement({
     setDb((prev) =>
       updateTeacherIdentityInDb(prev, teacherId, { firstName, lastName })
     );
-    setMessage("Intervenant mis à jour.");
+    setMessage("Intervenant mis a jour.");
   }
 
-  function handleAddTeacher({ teacher, constraints }) {
+  function handleAddTeacher({ teacher, unavailabilities }) {
     setDb((prev) => {
       let next = addTeacherToDb(prev, teacher);
 
-      constraints.forEach((constraint) => {
-        next = addConstraintToDb(next, constraint);
+      unavailabilities.forEach((unavailability) => {
+        next = addUnavailabilityToDb(next, unavailability);
       });
 
       return next;
     });
 
-    setMessage(
-      `Intervenant ajouté : ${teacher.firstName} ${teacher.lastName}.`
-    );
+    setMessage(`Intervenant ajoute : ${teacher.firstName} ${teacher.lastName}.`);
   }
 
   function handleAddTeacherUnavailability(rule) {
     if (!selectedTeacherId) return;
 
-    const constraint = createConstraint({
+    const unavailability = createUnavailability({
       entityType: "teacher",
       entityId: selectedTeacherId,
       ...rule,
     });
 
-    setDb((prev) => addConstraintToDb(prev, constraint));
-    setMessage("Indisponibilité ajoutée.");
+    setDb((prev) => addUnavailabilityToDb(prev, unavailability));
+    setMessage("Indisponibilite ajoutee.");
   }
 
-  function handleRemoveTeacherUnavailability(constraintId) {
-    setDb((prev) => removeConstraintFromDb(prev, constraintId));
-    setMessage("Indisponibilité supprimée.");
+  function handleRemoveTeacherUnavailability(unavailabilityId) {
+    setDb((prev) => removeUnavailabilityFromDb(prev, unavailabilityId));
+    setMessage("Indisponibilite supprimee.");
   }
 
   function handleConfirmDeleteTeacher() {
@@ -99,7 +97,7 @@ export default function useTeacherManagement({
     }
 
     setTeacherToDelete(null);
-    setMessage("Intervenant supprimé.");
+    setMessage("Intervenant supprime.");
   }
 
   function resetTeacherManagement() {
@@ -107,6 +105,7 @@ export default function useTeacherManagement({
     setTeacherToDelete(null);
     setIsAddTeacherModalOpen(false);
   }
+
   return {
     selectedTeacherId,
     setSelectedTeacherId,

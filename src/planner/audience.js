@@ -18,6 +18,59 @@ export function getGroupMap(db) {
   return Object.fromEntries((db.groups ?? []).map((group) => [group.id, group]));
 }
 
+export function getLeafDescendantGroupIds(db, groupId) {
+  const groupMap = getGroupMap(db);
+  const startGroup = groupMap[groupId];
+
+  if (!startGroup) {
+    return [];
+  }
+
+  if (!startGroup.childGroupIds?.length) {
+    return [groupId];
+  }
+
+  const leafIds = new Set();
+  const stack = [...startGroup.childGroupIds];
+
+  while (stack.length > 0) {
+    const currentGroupId = stack.pop();
+    const currentGroup = groupMap[currentGroupId];
+
+    if (!currentGroup) {
+      continue;
+    }
+
+    if (!currentGroup.childGroupIds?.length) {
+      leafIds.add(currentGroupId);
+      continue;
+    }
+
+    currentGroup.childGroupIds.forEach((childGroupId) => stack.push(childGroupId));
+  }
+
+  return [...leafIds];
+}
+
+export function getAudienceStudentCount(db, audience) {
+  const targetGroupIds = unique(audience?.targetGroupIds ?? []);
+  if (!targetGroupIds.length) {
+    return null;
+  }
+
+  const groupMap = getGroupMap(db);
+  const leafGroupIds = unique(
+    targetGroupIds.flatMap((groupId) => getLeafDescendantGroupIds(db, groupId))
+  );
+
+  const total = leafGroupIds.reduce((sum, groupId) => {
+    const studentCount = groupMap[groupId]?.studentCount;
+    return sum + (Number.isFinite(studentCount) ? studentCount : 0);
+  }, 0);
+
+  return total > 0 ? total : null;
+}
+
 export function getGroupSetMap(db) {
   return Object.fromEntries(
     (db.groupSets ?? []).map((groupSet) => [groupSet.id, groupSet])

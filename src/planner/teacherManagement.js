@@ -1,3 +1,5 @@
+import { createUnavailability, getUnavailabilityEntries } from "./unavailability";
+
 export function sortTeachersByLastName(teachers) {
   return [...teachers].sort((a, b) => {
     const aKey = `${a.lastName ?? ""} ${a.firstName ?? ""}`.trim().toLowerCase();
@@ -49,39 +51,16 @@ export function createTeacher({
   };
 }
 
-export function createConstraint({
-  entityType,
-  entityId,
-  timeScopeType,
-  dayIndex = null,
-  startSlotId = null,
-  endSlotId = null,
-  weekIds = [],
-  startDate = null,
-  endDate = null,
-  date = null,
-  dayId = null,
-  slotId = null,
-}) {
-  return {
-    id: `constraint-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    entityType,
-    entityId,
-    timeScopeType,
-    dayIndex,
-    startSlotId,
-    endSlotId,
-    weekIds,
-    startDate,
-    endDate,
-    date,
-    dayId,
-    slotId,
-  };
-}
-
 function cloneDb(db) {
   return structuredClone(db);
+}
+
+function withUpdatedUnavailabilities(db, unavailabilities) {
+  return {
+    ...db,
+    unavailabilities,
+    constraints: unavailabilities,
+  };
 }
 
 export function addTeacherToDb(db, teacher) {
@@ -107,16 +86,22 @@ export function updateTeacherIdentityInDb(db, teacherId, { firstName, lastName }
   return next;
 }
 
-export function addConstraintToDb(db, constraint) {
+export function addUnavailabilityToDb(db, unavailability) {
   const next = cloneDb(db);
-  next.constraints.push(constraint);
-  return next;
+  return withUpdatedUnavailabilities(next, [
+    ...getUnavailabilityEntries(next),
+    unavailability,
+  ]);
 }
 
-export function removeConstraintFromDb(db, constraintId) {
+export function removeUnavailabilityFromDb(db, unavailabilityId) {
   const next = cloneDb(db);
-  next.constraints = next.constraints.filter((constraint) => constraint.id !== constraintId);
-  return next;
+  return withUpdatedUnavailabilities(
+    next,
+    getUnavailabilityEntries(next).filter(
+      (unavailability) => unavailability.id !== unavailabilityId
+    )
+  );
 }
 
 export function deleteTeacherFromDb(db, teacherId) {
@@ -124,9 +109,9 @@ export function deleteTeacherFromDb(db, teacherId) {
 
   next.teachers = next.teachers.filter((teacher) => teacher.id !== teacherId);
 
-  next.constraints = next.constraints.filter(
-    (constraint) =>
-      !(constraint.entityType === "teacher" && constraint.entityId === teacherId)
+  const remainingUnavailabilities = getUnavailabilityEntries(next).filter(
+    (unavailability) =>
+      !(unavailability.entityType === "teacher" && unavailability.entityId === teacherId)
   );
 
   next.sessionInstances = next.sessionInstances.map((session) =>
@@ -145,5 +130,7 @@ export function deleteTeacherFromDb(db, teacherId) {
     ),
   }));
 
-  return next;
+  return withUpdatedUnavailabilities(next, remainingUnavailabilities);
 }
+
+export { createUnavailability };

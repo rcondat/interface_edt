@@ -1,9 +1,11 @@
 import CourseDetailsPanel from "./CourseDetailsPanel";
 import TeacherDetailsPanel from "./TeacherDetailsPanel";
+import { getEntityUnavailabilities } from "../planner/unavailability";
 
 export default function RightSidebar({
   db,
   teachers,
+  rooms,
   selectedTeacher,
   activeEditorPanel,
   semester,
@@ -17,6 +19,7 @@ export default function RightSidebar({
   handleRemoveTeacherUnavailability,
   handleRenameTeacher,
   handleAssignTeacher,
+  handleAssignRoom,
 }) {
   return (
     <div className="right-column">
@@ -25,13 +28,9 @@ export default function RightSidebar({
         <TeacherDetailsPanel
           key={selectedTeacher.id}
           teacher={selectedTeacher}
-          constraints={
+          unavailabilities={
             selectedTeacher
-              ? db.constraints.filter(
-                  (constraint) =>
-                    constraint.entityType === "teacher" &&
-                    constraint.entityId === selectedTeacher.id
-                )
+              ? getEntityUnavailabilities(db, "teacher", selectedTeacher.id)
               : []
           }
           weeks={semester.weeks}
@@ -50,9 +49,11 @@ export default function RightSidebar({
           courseTypes={courseTypes}
           paletteItems={paletteItems}
           teachers={teachers}
+          rooms={rooms}
           assignments={assignments}
           activeWeek={activeWeek}
           onAssignTeacher={handleAssignTeacher}
+          onAssignRoom={handleAssignRoom}
         />
       )}
 

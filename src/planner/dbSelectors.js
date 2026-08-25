@@ -1,5 +1,6 @@
 import { SLOT_MINUTES } from "./constants";
 import {
+  getAudienceStudentCount,
   deriveGroupLabelsFromGroupIds,
   derivePromotionLabelsFromPromotionIds,
   getRequirementAudienceMap,
@@ -57,6 +58,18 @@ export function getTeachers(db) {
   return db.teachers;
 }
 
+export function getRoomCategories(db) {
+  return [...(db.roomCategories ?? [])].sort((a, b) =>
+    String(a.label ?? "").localeCompare(String(b.label ?? ""), "fr")
+  );
+}
+
+export function getRooms(db) {
+  return [...(db.rooms ?? [])].sort((a, b) =>
+    String(a.label ?? "").localeCompare(String(b.label ?? ""), "fr")
+  );
+}
+
 export function getPromotions(db) {
   return [...(db.promotions ?? [])].sort((a, b) =>
     String(a.label ?? "").localeCompare(String(b.label ?? ""), "fr")
@@ -70,6 +83,7 @@ function buildRequirementAudienceView(db, requirementAudience, ecMap, requiremen
   const promotionLabels = derivePromotionLabelsFromPromotionIds(db, promotionIds);
   const groupIds = requirementAudience.targetGroupIds ?? [];
   const groupLabels = deriveGroupLabelsFromGroupIds(db, groupIds);
+  const studentCount = getAudienceStudentCount(db, { targetGroupIds: groupIds });
 
   return {
     id: requirementAudience.id,
@@ -87,6 +101,8 @@ function buildRequirementAudienceView(db, requirementAudience, ecMap, requiremen
     groupIds,
     groupLabels,
     groupSetIds: requirementAudience.groupSetIds ?? [],
+    studentCount,
+    allowedRoomCategoryIds: requirement?.allowedRoomCategoryIds ?? [],
   };
 }
 
@@ -95,6 +111,9 @@ function buildLegacyRequirementView(db, requirement, ecMap) {
   const audience = getRequirementAudienceSummary(db, requirement);
   const promotionLabels = derivePromotionLabelsFromPromotionIds(db, audience.promotionIds);
   const groupLabels = deriveGroupLabelsFromGroupIds(db, audience.targetGroupIds);
+  const studentCount = getAudienceStudentCount(db, {
+    targetGroupIds: audience.targetGroupIds,
+  });
 
   return {
     id: requirement.id,
@@ -112,6 +131,8 @@ function buildLegacyRequirementView(db, requirement, ecMap) {
     groupIds: audience.targetGroupIds,
     groupLabels,
     groupSetIds: audience.groupSetIds,
+    studentCount,
+    allowedRoomCategoryIds: requirement.allowedRoomCategoryIds ?? [],
   };
 }
 
@@ -267,10 +288,12 @@ export function buildAssignmentsView(db, weekId) {
         startSlot: slotIndex,
         durationSlots: requirement.durationSlots,
         assignedTeacherId: session.teacherId ?? null,
+        assignedRoomId: session.roomId ?? null,
         groupIds: audience.targetGroupIds,
         groupLabels,
         promotionIds: audience.promotionIds,
         groupSetIds: audience.groupSetIds,
+        studentCount: getAudienceStudentCount(db, audience),
         label: requirementAudience.label,
         subject: ec.label,
         category: requirement.type,

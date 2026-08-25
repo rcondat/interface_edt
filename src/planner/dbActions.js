@@ -1,5 +1,6 @@
 import { getDaysForWeek, getSlots } from "./dbSelectors";
 import { getRequirementForSession } from "./audience";
+import { getRoomAssignmentIssue } from "./rooms";
 
 function cloneDb(db) {
   return structuredClone(db);
@@ -164,5 +165,33 @@ export function assignTeacherToSession({ db, sessionInstanceId, teacherId }) {
   }
 
   session.teacherId = teacherId;
+  return { ok: true, db: next };
+}
+
+export function assignRoomToSession({ db, sessionInstanceId, roomId }) {
+  const next = cloneDb(db);
+  const session = getSessionById(next, sessionInstanceId);
+
+  if (!session) {
+    return { ok: false, reason: "Affectation de salle impossible." };
+  }
+
+  if (roomId) {
+    const roomIssue = getRoomAssignmentIssue({
+      db: next,
+      sessionInstanceId,
+      roomId,
+    });
+
+    if (roomIssue) {
+      return {
+        ok: false,
+        reason: "Affectation de salle impossible.",
+        roomIssue,
+      };
+    }
+  }
+
+  session.roomId = roomId;
   return { ok: true, db: next };
 }

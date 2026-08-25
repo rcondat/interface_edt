@@ -163,6 +163,7 @@ export default function App() {
           <RightSidebar
             db={planner.db}
             teachers={planner.teachers}
+            rooms={planner.rooms}
             selectedTeacher={planner.selectedTeacher}
             activeEditorPanel={planner.activeEditorPanel}
             semester={planner.semester}
@@ -176,6 +177,7 @@ export default function App() {
             handleRemoveTeacherUnavailability={planner.handleRemoveTeacherUnavailability}
             handleRenameTeacher={planner.handleRenameTeacher}
             handleAssignTeacher={planner.handleAssignTeacher}
+            handleAssignRoom={planner.handleAssignRoom}
           />
         </main>
       </div>

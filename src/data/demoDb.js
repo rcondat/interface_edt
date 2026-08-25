@@ -27,6 +27,7 @@ function makeGroup({
   label,
   groupSetId,
   promotionIds,
+  studentCount = null,
   parentGroupIds = [],
   childGroupIds = [],
 }) {
@@ -35,6 +36,7 @@ function makeGroup({
     label,
     groupSetId,
     promotionIds,
+    studentCount,
     parentGroupIds,
     childGroupIds,
   };
@@ -113,6 +115,41 @@ export function buildDemoDb() {
     { id: "t-garcia", firstName: "Nina", lastName: "Garcia" },
   ];
 
+  const roomCategories = [
+    { id: "room-cat-cm", label: "Salle CM" },
+    { id: "room-cat-td", label: "Salle TD" },
+    { id: "room-cat-tp", label: "Salle TP" },
+    { id: "room-cat-tdm", label: "Salle TDM" },
+    { id: "room-cat-tp-elec", label: "Salle TP Electronique" },
+  ];
+
+  const rooms = [
+    {
+      id: "room-a101",
+      label: "A101",
+      capacity: 80,
+      roomCategoryIds: ["room-cat-cm", "room-cat-td"],
+    },
+    {
+      id: "room-a102",
+      label: "A102",
+      capacity: 40,
+      roomCategoryIds: ["room-cat-td"],
+    },
+    {
+      id: "room-b201",
+      label: "B201",
+      capacity: 24,
+      roomCategoryIds: ["room-cat-tp"],
+    },
+    {
+      id: "room-c301",
+      label: "C301",
+      capacity: 18,
+      roomCategoryIds: ["room-cat-tp-elec"],
+    },
+  ];
+
   const promotions = [
     {
       id: "promo-iti3",
@@ -184,24 +221,28 @@ export function buildDemoDb() {
       label: "ITI3_CM",
       groupSetId: "gs-iti3-cm",
       promotionIds: ["promo-iti3"],
+      studentCount: 72,
     }),
     makeGroup({
       id: "grp-iti4-cm",
       label: "ITI4_CM",
       groupSetId: "gs-iti4-cm",
       promotionIds: ["promo-iti4"],
+      studentCount: 42,
     }),
     makeGroup({
       id: "grp-iti3-algo-td1",
       label: "TD1_Algo",
       groupSetId: "gs-iti3-algo-td",
       promotionIds: ["promo-iti3"],
+      studentCount: 24,
     }),
     makeGroup({
       id: "grp-iti3-algo-td2",
       label: "TD2_Algo",
       groupSetId: "gs-iti3-algo-td",
       promotionIds: ["promo-iti3"],
+      studentCount: 24,
     }),
     makeGroup({
       id: "grp-iti3-algo-td3",
@@ -215,6 +256,7 @@ export function buildDemoDb() {
       label: "TP3-1_Algo",
       groupSetId: "gs-iti3-algo-tp-td3",
       promotionIds: ["promo-iti3"],
+      studentCount: 12,
       parentGroupIds: ["grp-iti3-algo-td3"],
     }),
     makeGroup({
@@ -222,6 +264,7 @@ export function buildDemoDb() {
       label: "TP3-2_Algo",
       groupSetId: "gs-iti3-algo-tp-td3",
       promotionIds: ["promo-iti3"],
+      studentCount: 12,
       parentGroupIds: ["grp-iti3-algo-td3"],
     }),
     makeGroup({
@@ -229,24 +272,28 @@ export function buildDemoDb() {
       label: "TD1_BD",
       groupSetId: "gs-iti3-bd-td",
       promotionIds: ["promo-iti3"],
+      studentCount: 36,
     }),
     makeGroup({
       id: "grp-iti3-bd-td2",
       label: "TD2_BD",
       groupSetId: "gs-iti3-bd-td",
       promotionIds: ["promo-iti3"],
+      studentCount: 36,
     }),
     makeGroup({
       id: "grp-iti4-tim-td1",
       label: "TD1_TIM",
       groupSetId: "gs-iti4-tim-td",
       promotionIds: ["promo-iti4"],
+      studentCount: 21,
     }),
     makeGroup({
       id: "grp-iti4-tim-td2",
       label: "TD2_TIM",
       groupSetId: "gs-iti4-tim-td",
       promotionIds: ["promo-iti4"],
+      studentCount: 21,
     }),
   ];
 
@@ -284,6 +331,7 @@ export function buildDemoDb() {
       type: "CM",
       durationSlots: 2,
       possibleTeacherIds: ["t-durand", "t-martin"],
+      allowedRoomCategoryIds: ["room-cat-cm"],
     },
     {
       id: "req-algo-td",
@@ -291,6 +339,7 @@ export function buildDemoDb() {
       type: "TD",
       durationSlots: 1,
       possibleTeacherIds: ["t-martin", "t-garcia", "t-bernard"],
+      allowedRoomCategoryIds: ["room-cat-td"],
     },
     {
       id: "req-algo-tp",
@@ -298,6 +347,7 @@ export function buildDemoDb() {
       type: "TP",
       durationSlots: 1,
       possibleTeacherIds: ["t-durand", "t-garcia"],
+      allowedRoomCategoryIds: ["room-cat-tp"],
     },
     {
       id: "req-bdd-cm",
@@ -305,6 +355,7 @@ export function buildDemoDb() {
       type: "CM",
       durationSlots: 1,
       possibleTeacherIds: ["t-bernard"],
+      allowedRoomCategoryIds: ["room-cat-cm"],
     },
     {
       id: "req-bdd-td",
@@ -312,6 +363,7 @@ export function buildDemoDb() {
       type: "TD",
       durationSlots: 1,
       possibleTeacherIds: ["t-durand", "t-garcia"],
+      allowedRoomCategoryIds: ["room-cat-td"],
     },
     {
       id: "req-tim-cm",
@@ -319,6 +371,7 @@ export function buildDemoDb() {
       type: "CM",
       durationSlots: 2,
       possibleTeacherIds: ["t-martin"],
+      allowedRoomCategoryIds: ["room-cat-cm"],
     },
     {
       id: "req-tim-td",
@@ -326,6 +379,7 @@ export function buildDemoDb() {
       type: "TD",
       durationSlots: 1,
       possibleTeacherIds: ["t-martin", "t-garcia"],
+      allowedRoomCategoryIds: ["room-cat-td"],
     },
   ];
 
@@ -447,6 +501,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-cm-iti3",
       occurrenceIndex: 1,
       teacherId: "t-durand",
+      roomId: "room-a101",
       scheduledDayId: "day-36-1",
       startSlotId: "slot-1",
       targetGroupIds: ["grp-iti3-cm"],
@@ -458,6 +513,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-cm-iti3",
       occurrenceIndex: 2,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-cm"],
@@ -469,6 +525,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-td1",
       occurrenceIndex: 1,
       teacherId: "t-martin",
+      roomId: "room-a102",
       scheduledDayId: "day-36-5",
       startSlotId: "slot-4",
       targetGroupIds: ["grp-iti3-algo-td1"],
@@ -480,6 +537,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-td2",
       occurrenceIndex: 1,
       teacherId: "t-garcia",
+      roomId: "room-a101",
       scheduledDayId: "day-36-5",
       startSlotId: "slot-4",
       targetGroupIds: ["grp-iti3-algo-td2"],
@@ -491,6 +549,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-td3",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-algo-td3"],
@@ -502,6 +561,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-tp3-1",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-algo-tp3-1"],
@@ -513,6 +573,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-algo-tp3-2",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-algo-tp3-2"],
@@ -524,6 +585,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-bdd-cm-iti3",
       occurrenceIndex: 1,
       teacherId: "t-bernard",
+      roomId: "room-a101",
       scheduledDayId: "day-36-3",
       startSlotId: "slot-2",
       targetGroupIds: ["grp-iti3-cm"],
@@ -535,6 +597,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-bdd-cm-iti3",
       occurrenceIndex: 2,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-cm"],
@@ -546,6 +609,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-bdd-td1",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-bd-td1"],
@@ -557,6 +621,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-bdd-td2",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti3-bd-td2"],
@@ -568,6 +633,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-tim-cm-iti4",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti4-cm"],
@@ -579,6 +645,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-tim-cm-iti4",
       occurrenceIndex: 2,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti4-cm"],
@@ -590,6 +657,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-tim-td1",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti4-tim-td1"],
@@ -601,6 +669,7 @@ export function buildDemoDb() {
       requirementAudienceId: "ra-tim-td2",
       occurrenceIndex: 1,
       teacherId: null,
+      roomId: null,
       scheduledDayId: null,
       startSlotId: null,
       targetGroupIds: ["grp-iti4-tim-td2"],
@@ -608,9 +677,9 @@ export function buildDemoDb() {
     },
   ];
 
-  const constraints = [
+  const unavailabilities = [
     {
-      id: "constraint-durand-weekly",
+      id: "unavailability-durand-weekly",
       entityType: "teacher",
       entityId: "t-durand",
       timeScopeType: "weekly",
@@ -625,7 +694,7 @@ export function buildDemoDb() {
       slotId: null,
     },
     {
-      id: "constraint-martin-specific-weeks",
+      id: "unavailability-martin-specific-weeks",
       entityType: "teacher",
       entityId: "t-martin",
       timeScopeType: "specific-weeks",
@@ -640,7 +709,7 @@ export function buildDemoDb() {
       slotId: null,
     },
     {
-      id: "constraint-bernard-date-time",
+      id: "unavailability-bernard-date-time",
       entityType: "teacher",
       entityId: "t-bernard",
       timeScopeType: "specific-date-time",
@@ -655,7 +724,7 @@ export function buildDemoDb() {
       slotId: null,
     },
     {
-      id: "constraint-global-holiday-day-38-3",
+      id: "unavailability-global-holiday-day-38-3",
       entityType: "global",
       entityId: null,
       timeScopeType: "day",
@@ -669,6 +738,21 @@ export function buildDemoDb() {
       dayId: "day-38-3",
       slotId: null,
     },
+    {
+      id: "unavailability-room-a102-cleaning",
+      entityType: "room",
+      entityId: "room-a102",
+      timeScopeType: "weekly",
+      dayIndex: 3,
+      startSlotId: "slot-4",
+      endSlotId: "slot-4",
+      weekIds: [],
+      startDate: null,
+      endDate: null,
+      date: null,
+      dayId: null,
+      slotId: null,
+    },
   ];
 
   return {
@@ -679,11 +763,14 @@ export function buildDemoDb() {
     promotions,
     groupSets,
     groups,
+    roomCategories,
+    rooms,
     ecs,
     requirements,
     requirementAudiences,
     sessionInstances,
     teachers,
-    constraints,
+    unavailabilities,
+    constraints: unavailabilities,
   };
 }

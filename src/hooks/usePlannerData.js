@@ -6,6 +6,7 @@ import {
   getPaletteItems,
   getPromotions,
   getRequirementsView,
+  getRooms,
   getSemesterView,
   getTeachers,
   getWeek,
@@ -21,6 +22,7 @@ export default function usePlannerData() {
   const courseTypes = useMemo(() => getRequirementsView(db), [db]);
   const paletteItems = useMemo(() => getPaletteItems(db), [db]);
   const teachers = useMemo(() => getTeachers(db), [db]);
+  const rooms = useMemo(() => getRooms(db), [db]);
   const promotions = useMemo(() => getPromotions(db), [db]);
   const assignments = useMemo(
     () => buildAssignmentsView(db, activeWeekId),
@@ -52,6 +54,7 @@ export default function usePlannerData() {
     courseTypes,
     paletteItems,
     teachers,
+    rooms,
     promotions,
     assignments,
     teacherMap,

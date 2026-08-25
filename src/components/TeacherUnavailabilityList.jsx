@@ -31,12 +31,12 @@ function formatRule(rule, weeks, slots) {
 }
 
 export default function TeacherUnavailabilityList({
-  constraints,
+  unavailabilities,
   weeks,
   slots,
   onRemoveUnavailability,
 }) {
-  const items = constraints ?? [];
+  const items = unavailabilities ?? [];
 
   return (
     <div className="unavailability-list">

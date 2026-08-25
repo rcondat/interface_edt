@@ -8,6 +8,7 @@ import {
   getTeacherAvailabilityIssue,
   isDayClosed,
 } from "./teachers";
+import { getRoomAvailabilityIssue } from "./rooms";
 
 function isIgnoredEntry({
   entry,
@@ -93,6 +94,7 @@ export function getCellConstraintState({
     return {
       occupied,
       teacherUnavailable: false,
+      roomUnavailable: false,
       promotionUnavailable: false,
       dayClosed: false,
     };
@@ -124,9 +126,23 @@ export function getCellConstraintState({
         })
       : null;
 
+  const roomIssue =
+    courseType && draggedBlock?.assignedRoomId && !dayClosed
+      ? getRoomAvailabilityIssue({
+          db,
+          courseType,
+          block: draggedBlock,
+          roomId: draggedBlock.assignedRoomId,
+          dayId: day.id,
+          startSlotId: slot.id,
+          durationSlots: 1,
+        })
+      : null;
+
   return {
     occupied,
     teacherUnavailable: Boolean(teacherIssue),
+    roomUnavailable: Boolean(roomIssue),
     promotionUnavailable: Boolean(promotionIssue),
     dayClosed,
   };
@@ -228,6 +244,26 @@ export function getPreviewState({
     };
   }
 
+  if (draggedBlock?.assignedRoomId) {
+    const roomIssue = getRoomAvailabilityIssue({
+      db,
+      courseType,
+      block: draggedBlock,
+      roomId: draggedBlock.assignedRoomId,
+      dayId: day.id,
+      startSlotId: slot.id,
+      durationSlots: previewDuration,
+    });
+
+    if (roomIssue) {
+      return {
+        isPreview: true,
+        isValid: false,
+        reason: roomIssue.reason,
+      };
+    }
+  }
+
   return { isPreview: true, isValid: true, reason: null };
 }
 
@@ -302,6 +338,22 @@ export function validateDrop({
 
   if (teacherIssue) {
     return { ok: false, reason: "teacher-unavailable" };
+  }
+
+  if (draggedBlock?.assignedRoomId) {
+    const roomIssue = getRoomAvailabilityIssue({
+      db,
+      courseType,
+      block: draggedBlock,
+      roomId: draggedBlock.assignedRoomId,
+      dayId: day.id,
+      startSlotId: slot.id,
+      durationSlots,
+    });
+
+    if (roomIssue) {
+      return { ok: false, reason: "room-unavailable" };
+    }
   }
 
   return { ok: true };

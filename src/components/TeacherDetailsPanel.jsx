@@ -8,7 +8,7 @@ import {
 
 export default function TeacherDetailsPanel({
   teacher,
-  constraints,
+  unavailabilities,
   weeks,
   slots,
   onAddUnavailability,
@@ -106,7 +106,7 @@ export default function TeacherDetailsPanel({
         />
 
         <TeacherUnavailabilityList
-          constraints={constraints}
+          unavailabilities={unavailabilities}
           weeks={weeks}
           slots={slots}
           onRemoveUnavailability={onRemoveUnavailability}
